@@ -513,6 +513,9 @@
       })
       .replace(/<a href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
       .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, function (match, src) {
+        // Ensure relative URL for GitLab uploads
+        var idx = src.indexOf("/uploads/");
+        if (idx !== -1) src = src.substring(idx);
         var wMatch = match.match(/data-width="(\d+)"/);
         var hMatch = match.match(/data-height="(\d+)"/);
         var dims = "";
