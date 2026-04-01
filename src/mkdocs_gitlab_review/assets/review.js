@@ -339,6 +339,8 @@
     body.className = "glr-note__body";
 
     var cleaned = stripFilePrefix(note.body);
+    // Strip GitLab-specific image attributes
+    cleaned = cleaned.replace(/\{width=\d+\s+height=\d+\}/g, "");
     if (cleaned && cleaned.charAt(0) === "<") {
       body.innerHTML = fixRelativeUrls(cleaned);
     } else {
@@ -371,11 +373,12 @@
 
   function renderMd(text) {
     if (!text) return "";
+    // Strip GitLab-specific {width=N height=N} image attributes
+    text = text.replace(/\{width=\d+\s+height=\d+\}/g, "");
     if (typeof marked !== "undefined") {
       marked.setOptions({ breaks: true, gfm: true });
       return fixRelativeUrls(marked.parse(text));
     }
-    // Fallback: show as plain text with line breaks
     return "<p>" + text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>") + "</p>";
   }
 
