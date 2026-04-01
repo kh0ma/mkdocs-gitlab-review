@@ -460,27 +460,22 @@
     var range = quill.getSelection(true);
     quill.insertText(range.index, "Завантаження...", { italic: true });
 
-    // Get image dimensions
-    var img = new Image();
+    // Show blob URL immediately in editor (works locally)
     var blobUrl = URL.createObjectURL(file);
+    var img = new Image();
 
     img.onload = function () {
       var w = img.naturalWidth;
       var h = img.naturalHeight;
-      URL.revokeObjectURL(blobUrl);
 
       uploadImage(file).then(function (url) {
         quill.deleteText(range.index, "Завантаження...".length);
         if (url) {
-          // For display in editor: use full URL with /-/ prefix
-          var displayUrl = url;
-          if (url.startsWith("/uploads/")) {
-            var base = (config.project_url || config.gitlab_url).replace(/\/$/, "");
-            displayUrl = base + url;
-          }
-          quill.insertEmbed(range.index, "image", displayUrl);
-          var imgEl = quill.root.querySelector('img[src="' + displayUrl + '"]');
+          // Display blob URL in editor (visible), store GitLab URL as data attr
+          quill.insertEmbed(range.index, "image", blobUrl);
+          var imgEl = quill.root.querySelector('img[src="' + blobUrl + '"]');
           if (imgEl) {
+            imgEl.setAttribute("data-gitlab-url", url);
             imgEl.setAttribute("data-width", w);
             imgEl.setAttribute("data-height", h);
             imgEl.style.maxWidth = "100%";
@@ -517,14 +512,17 @@
       })
       .replace(/<a href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
       .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, function (match, src) {
+        // Use GitLab URL if available (blob URLs are editor-only)
+        var gitlabMatch = match.match(/data-gitlab-url="([^"]*)"/);
+        var finalSrc = gitlabMatch ? gitlabMatch[1] : src;
         // Ensure relative URL for GitLab uploads
-        var idx = src.indexOf("/uploads/");
-        if (idx !== -1) src = src.substring(idx);
+        var idx = finalSrc.indexOf("/uploads/");
+        if (idx !== -1) finalSrc = finalSrc.substring(idx);
         var wMatch = match.match(/data-width="(\d+)"/);
         var hMatch = match.match(/data-height="(\d+)"/);
         var dims = "";
         if (wMatch && hMatch) dims = "{width=" + wMatch[1] + " height=" + hMatch[1] + "}";
-        return "\n![image](" + src + ")" + dims + "\n";
+        return "\n![image](" + finalSrc + ")" + dims + "\n";
       })
       .replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n")
       .replace(/<\/?[uo]l>/gi, "")
@@ -744,23 +742,23 @@
   }
 
   function loadAuthImages(container) {
-    // Fix image URLs to point to GitLab project with /-/ prefix
+    // GitLab uploads are only accessible via GitLab's internal rendering.
+    // Replace <img> with clickable placeholder linking to GitLab MR.
     var imgs = container.querySelectorAll("img");
-    var projectBase = (config.project_url || config.gitlab_url).replace(/\/$/, "");
 
     imgs.forEach(function (img) {
       var src = img.getAttribute("src") || "";
       if (src.indexOf("/uploads/") === -1) return;
 
-      var uploadsIdx = src.indexOf("/uploads/");
-      var uploadPath = src.substring(uploadsIdx);
-
-      // Ensure /-/ prefix before /uploads/
-      if (src.indexOf("/-/uploads/") === -1) {
-        img.src = projectBase + uploadPath;
-      } else if (!src.startsWith("http")) {
-        img.src = projectBase + uploadPath;
-      }
+      var link = document.createElement("a");
+      link.className = "glr-image-placeholder";
+      link.href = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
+        "/-/merge_requests/" + state.mrIid;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.innerHTML = '<span class="glr-image-placeholder__icon">\uD83D\uDDBC</span>' +
+        '<span class="glr-image-placeholder__text">Зображення — відкрити в GitLab</span>';
+      img.replaceWith(link);
     });
   }
 

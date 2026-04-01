@@ -127,6 +127,27 @@
   color: var(--md-accent-fg-color, #536dfe);
 }
 
+.glr-image-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  background: var(--md-default-fg-color--lightest, #f0f0f0);
+  border-radius: 0.3rem;
+  color: var(--md-accent-fg-color, #536dfe) !important;
+  text-decoration: none !important;
+  font-size: 0.8rem;
+  margin: 0.2rem 0;
+}
+
+.glr-image-placeholder:hover {
+  background: var(--md-accent-fg-color--transparent, rgba(83, 109, 254, 0.1));
+}
+
+.glr-image-placeholder__icon {
+  font-size: 1.1rem;
+}
+
 /* --- Comment form --- */
 
 .glr-form {
