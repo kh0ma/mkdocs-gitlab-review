@@ -192,6 +192,9 @@
           toggleThreads(block, file, line, discussions, canComment);
         });
         block.appendChild(badge);
+
+        // Auto-expand on initial load
+        showThreads(block, file, line, discussions, canComment);
       }
 
       // Click "+" to add comment
@@ -243,7 +246,10 @@
       existing.remove();
       return;
     }
+    showThreads(block, file, line, discussions, canComment);
+  }
 
+  function showThreads(block, file, line, discussions, canComment) {
     var container = document.createElement("div");
     container.className = "glr-threads";
 
