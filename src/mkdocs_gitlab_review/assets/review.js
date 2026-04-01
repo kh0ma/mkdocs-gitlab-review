@@ -403,33 +403,34 @@
 
   function postComment(file, line, body) {
     var fileInfo = state.changedFiles[file];
-    var payload = { body: body };
 
-    if (state.diffRefs && fileInfo) {
-      var position = {
-        position_type: "text",
-        base_sha: state.diffRefs.base_sha,
-        start_sha: state.diffRefs.start_sha,
-        head_sha: state.diffRefs.head_sha,
-        old_path: fileInfo.old_path,
-        new_path: fileInfo.new_path,
-      };
-
-      if (fileInfo.new_file || fileInfo.new_lines.has(line)) {
-        // Added line — only new_line
-        position.new_line = line;
-      } else {
-        // Context line — both old and new
-        position.old_line = line;
-        position.new_line = line;
-      }
-
-      payload.position = position;
+    if (state.diffRefs && fileInfo && (fileInfo.new_file || fileInfo.new_lines.has(line))) {
+      // Added/changed line — post as inline diff comment
+      return OAuth.apiFetch(
+        "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            body: body,
+            position: {
+              position_type: "text",
+              base_sha: state.diffRefs.base_sha,
+              start_sha: state.diffRefs.start_sha,
+              head_sha: state.diffRefs.head_sha,
+              old_path: fileInfo.old_path,
+              new_path: fileInfo.new_path,
+              new_line: line,
+            },
+          }),
+        }
+      );
     }
 
+    // Unchanged line or no diff info — post as general discussion with file reference
+    var prefix = "`" + file + ":" + line + "`\n\n";
     return OAuth.apiFetch(
       "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
-      { method: "POST", body: JSON.stringify(payload) }
+      { method: "POST", body: JSON.stringify({ body: prefix + body }) }
     );
   }
 
@@ -444,11 +445,17 @@
   // --- Helpers ---
 
   function findDiscussionsForLine(file, line) {
+    var tag = "`" + file + ":" + line + "`";
     return state.discussions.filter(function (d) {
       var firstNote = d.notes && d.notes[0];
-      if (!firstNote || !firstNote.position) return false;
-      var pos = firstNote.position;
-      return pos.new_path === file && pos.new_line === line;
+      if (!firstNote) return false;
+      // Match inline diff comments
+      if (firstNote.position) {
+        var pos = firstNote.position;
+        return pos.new_path === file && pos.new_line === line;
+      }
+      // Match general discussions with file:line prefix
+      return firstNote.body && firstNote.body.indexOf(tag) === 0;
     });
   }
 
