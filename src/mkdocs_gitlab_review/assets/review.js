@@ -369,51 +369,51 @@
     return "<p>" + text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>") + "</p>";
   }
 
-  // --- Editor ---
+  // --- Editor (TipTap WYSIWYG) ---
+
+  function getTipTap() {
+    // TipTap UMD globals
+    var w = window;
+    return {
+      Editor: (w.tiptapCore || w["@tiptap/core"]).Editor,
+      StarterKit: (w.tiptapStarterKit || w["@tiptap/starter-kit"]).StarterKit,
+      Link: (w.tiptapExtensionLink || w["@tiptap/extension-link"]).Link,
+      Image: (w.tiptapExtensionImage || w["@tiptap/extension-image"]).Image,
+      Placeholder: (w.tiptapExtensionPlaceholder || w["@tiptap/extension-placeholder"]).Placeholder,
+      Underline: (w.tiptapExtensionUnderline || w["@tiptap/extension-underline"]).Underline,
+    };
+  }
 
   function createEditor(placeholder) {
+    var tt = getTipTap();
     var wrapper = document.createElement("div");
     wrapper.className = "glr-editor";
-
-    // Tabs: Write / Preview
-    var tabs = document.createElement("div");
-    tabs.className = "glr-editor__tabs";
-
-    var writeTab = document.createElement("button");
-    writeTab.className = "glr-editor__tab glr-editor__tab--active";
-    writeTab.textContent = "Написати";
-    writeTab.type = "button";
-
-    var previewTab = document.createElement("button");
-    previewTab.className = "glr-editor__tab";
-    previewTab.textContent = "Перегляд";
-    previewTab.type = "button";
-
-    tabs.appendChild(writeTab);
-    tabs.appendChild(previewTab);
-    wrapper.appendChild(tabs);
 
     // Toolbar
     var toolbar = document.createElement("div");
     toolbar.className = "glr-editor__toolbar";
 
-    var buttons = [
-      { cmd: "bold", icon: "<b>B</b>", title: "Bold (Ctrl+B)", md: "**", mdWrap: true },
-      { cmd: "italic", icon: "<i>I</i>", title: "Italic (Ctrl+I)", md: "_", mdWrap: true },
-      { cmd: "strikeThrough", icon: "<s>S</s>", title: "Strikethrough", md: "~~", mdWrap: true },
+    var btnDefs = [
+      { action: "bold", icon: "<b>B</b>", title: "Bold" },
+      { action: "italic", icon: "<i>I</i>", title: "Italic" },
+      { action: "underline", icon: "<u>U</u>", title: "Underline" },
+      { action: "strike", icon: "<s>S</s>", title: "Strikethrough" },
       { sep: true },
-      { prefix: "### ", icon: "H", title: "Heading" },
-      { prefix: "- ", icon: "\u2022", title: "Bullet list" },
-      { prefix: "1. ", icon: "1.", title: "Numbered list" },
+      { action: "heading", icon: "H", title: "Heading", level: 3 },
+      { action: "bulletList", icon: "\u2022", title: "Bullet list" },
+      { action: "orderedList", icon: "1.", title: "Numbered list" },
       { sep: true },
-      { prefix: "> ", icon: "\u275D", title: "Quote" },
-      { md: "`", mdWrap: true, icon: "&lt;/&gt;", title: "Inline code" },
-      { custom: "link", icon: "\uD83D\uDD17", title: "Link" },
-      { custom: "image", icon: "\uD83D\uDDBC", title: "Image" },
-      { insert: "\n---\n", icon: "\u2015", title: "Horizontal rule" },
+      { action: "blockquote", icon: "\u275D", title: "Quote" },
+      { action: "code", icon: "&lt;/&gt;", title: "Code" },
+      { action: "codeBlock", icon: "{}", title: "Code block" },
+      { action: "link", icon: "\uD83D\uDD17", title: "Link" },
+      { action: "image", icon: "\uD83D\uDDBC", title: "Image" },
+      { action: "horizontalRule", icon: "\u2015", title: "Horizontal rule" },
     ];
 
-    buttons.forEach(function (b) {
+    var tipTapEditor = null;
+
+    btnDefs.forEach(function (b) {
       if (b.sep) {
         var sep = document.createElement("span");
         sep.className = "glr-editor__sep";
@@ -427,136 +427,139 @@
       btn.type = "button";
       btn.addEventListener("click", function (e) {
         e.preventDefault();
-        editorAction(textarea, b);
+        if (!tipTapEditor) return;
+        var chain = tipTapEditor.chain().focus();
+        switch (b.action) {
+          case "bold": chain.toggleBold().run(); break;
+          case "italic": chain.toggleItalic().run(); break;
+          case "underline": chain.toggleUnderline().run(); break;
+          case "strike": chain.toggleStrike().run(); break;
+          case "heading": chain.toggleHeading({ level: b.level }).run(); break;
+          case "bulletList": chain.toggleBulletList().run(); break;
+          case "orderedList": chain.toggleOrderedList().run(); break;
+          case "blockquote": chain.toggleBlockquote().run(); break;
+          case "code": chain.toggleCode().run(); break;
+          case "codeBlock": chain.toggleCodeBlock().run(); break;
+          case "horizontalRule": chain.setHorizontalRule().run(); break;
+          case "link":
+            var url = prompt("URL:");
+            if (url) chain.setLink({ href: url }).run();
+            break;
+          case "image":
+            var input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*";
+            input.addEventListener("change", function () {
+              if (input.files && input.files[0]) {
+                uploadImage(input.files[0]).then(function (imgUrl) {
+                  if (imgUrl) tipTapEditor.chain().focus().setImage({ src: imgUrl }).run();
+                });
+              }
+            });
+            input.click();
+            break;
+        }
       });
       toolbar.appendChild(btn);
     });
 
     wrapper.appendChild(toolbar);
 
-    // Textarea (markdown source)
-    var textarea = document.createElement("textarea");
-    textarea.className = "glr-editor__textarea";
-    textarea.placeholder = placeholder || "Написати коментар...";
-    textarea.rows = 4;
+    // Editor content area
+    var editorEl = document.createElement("div");
+    editorEl.className = "glr-editor__content";
+    wrapper.appendChild(editorEl);
 
-    // Image paste
-    textarea.addEventListener("paste", function (e) {
-      var items = (e.clipboardData || {}).items;
-      if (!items) return;
-      for (var i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image/") === 0) {
-          e.preventDefault();
-          var file = items[i].getAsFile();
-          handleImageUpload(textarea, file);
-          return;
-        }
-      }
-    });
-
-    // Drag & drop images
-    textarea.addEventListener("drop", function (e) {
-      var files = e.dataTransfer && e.dataTransfer.files;
-      if (!files) return;
-      for (var i = 0; i < files.length; i++) {
-        if (files[i].type.indexOf("image/") === 0) {
-          e.preventDefault();
-          handleImageUpload(textarea, files[i]);
-          return;
-        }
-      }
-    });
-    textarea.addEventListener("dragover", function (e) { e.preventDefault(); });
-
-    wrapper.appendChild(textarea);
-
-    // Preview pane
-    var preview = document.createElement("div");
-    preview.className = "glr-editor__preview";
-    preview.style.display = "none";
-    wrapper.appendChild(preview);
-
-    // Tab switching
-    writeTab.addEventListener("click", function () {
-      writeTab.classList.add("glr-editor__tab--active");
-      previewTab.classList.remove("glr-editor__tab--active");
-      textarea.style.display = "";
-      toolbar.style.display = "";
-      preview.style.display = "none";
-    });
-
-    previewTab.addEventListener("click", function () {
-      previewTab.classList.add("glr-editor__tab--active");
-      writeTab.classList.remove("glr-editor__tab--active");
-      textarea.style.display = "none";
-      toolbar.style.display = "none";
-      preview.innerHTML = renderMd(textarea.value) || '<p style="color:#999">Нічого для перегляду</p>';
-      preview.style.display = "";
-    });
+    // Initialize TipTap after DOM attachment
+    setTimeout(function () {
+      tipTapEditor = new tt.Editor({
+        element: editorEl,
+        extensions: [
+          tt.StarterKit,
+          tt.Link.configure({ openOnClick: false }),
+          tt.Image.configure({ inline: true }),
+          tt.Placeholder.configure({ placeholder: placeholder || "Написати коментар..." }),
+          tt.Underline,
+        ],
+        content: "",
+        editorProps: {
+          handlePaste: function (view, event) {
+            var items = (event.clipboardData || {}).items;
+            if (!items) return false;
+            for (var i = 0; i < items.length; i++) {
+              if (items[i].type.indexOf("image/") === 0) {
+                event.preventDefault();
+                var file = items[i].getAsFile();
+                uploadImage(file).then(function (imgUrl) {
+                  if (imgUrl) tipTapEditor.chain().focus().setImage({ src: imgUrl }).run();
+                });
+                return true;
+              }
+            }
+            return false;
+          },
+          handleDrop: function (view, event) {
+            var files = event.dataTransfer && event.dataTransfer.files;
+            if (!files) return false;
+            for (var i = 0; i < files.length; i++) {
+              if (files[i].type.indexOf("image/") === 0) {
+                event.preventDefault();
+                (function (f) {
+                  uploadImage(f).then(function (imgUrl) {
+                    if (imgUrl) tipTapEditor.chain().focus().setImage({ src: imgUrl }).run();
+                  });
+                })(files[i]);
+                return true;
+              }
+            }
+            return false;
+          },
+        },
+      });
+    }, 0);
 
     return {
       el: wrapper,
-      getMarkdown: function () { return textarea.value.trim(); },
-      clear: function () { textarea.value = ""; },
-      focus: function () { textarea.focus(); },
+      getMarkdown: function () {
+        if (!tipTapEditor) return "";
+        return htmlToMarkdown(tipTapEditor.getHTML());
+      },
+      clear: function () {
+        if (tipTapEditor) tipTapEditor.commands.clearContent();
+      },
+      focus: function () {
+        if (tipTapEditor) tipTapEditor.commands.focus();
+      },
     };
   }
 
-  function editorAction(textarea, b) {
-    var start = textarea.selectionStart;
-    var end = textarea.selectionEnd;
-    var text = textarea.value;
-    var selected = text.substring(start, end);
-
-    if (b.mdWrap && b.md) {
-      var wrapped = b.md + (selected || "text") + b.md;
-      textarea.value = text.substring(0, start) + wrapped + text.substring(end);
-      textarea.selectionStart = start + b.md.length;
-      textarea.selectionEnd = start + wrapped.length - b.md.length;
-    } else if (b.prefix) {
-      // Find start of line
-      var lineStart = text.lastIndexOf("\n", start - 1) + 1;
-      textarea.value = text.substring(0, lineStart) + b.prefix + text.substring(lineStart);
-      textarea.selectionStart = start + b.prefix.length;
-      textarea.selectionEnd = end + b.prefix.length;
-    } else if (b.insert) {
-      textarea.value = text.substring(0, end) + b.insert + text.substring(end);
-      textarea.selectionStart = textarea.selectionEnd = end + b.insert.length;
-    } else if (b.custom === "link") {
-      var url = prompt("URL:");
-      if (url) {
-        var linkText = selected || "link";
-        var md = "[" + linkText + "](" + url + ")";
-        textarea.value = text.substring(0, start) + md + text.substring(end);
-      }
-    } else if (b.custom === "image") {
-      // Open file picker
-      var input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.addEventListener("change", function () {
-        if (input.files && input.files[0]) {
-          handleImageUpload(textarea, input.files[0]);
-        }
-      });
-      input.click();
-    }
-    textarea.focus();
-  }
-
-  function handleImageUpload(textarea, file) {
-    var start = textarea.selectionStart;
-    var placeholder = "![Uploading...]()";
-    textarea.value = textarea.value.substring(0, start) + placeholder + textarea.value.substring(start);
-    textarea.selectionStart = textarea.selectionEnd = start + placeholder.length;
-
-    uploadImage(file).then(function (url) {
-      if (url) {
-        textarea.value = textarea.value.replace(placeholder, "![](" + url + ")");
-      } else {
-        textarea.value = textarea.value.replace(placeholder, "![Upload failed]()");
-      }
-    });
+  function htmlToMarkdown(html) {
+    if (!html || html === "<p></p>") return "";
+    return html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>\s*<p>/gi, "\n\n")
+      .replace(/<p>/gi, "").replace(/<\/p>/gi, "")
+      .replace(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi, function (_, l, t) { return "#".repeat(parseInt(l)) + " " + t + "\n\n"; })
+      .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
+      .replace(/<b>(.*?)<\/b>/gi, "**$1**")
+      .replace(/<em>(.*?)<\/em>/gi, "*$1*")
+      .replace(/<i>((?:(?!<\/?i>).)*)<\/i>/gi, "*$1*")
+      .replace(/<u>(.*?)<\/u>/gi, "$1")
+      .replace(/<del>(.*?)<\/del>/gi, "~~$1~~")
+      .replace(/<s>(.*?)<\/s>/gi, "~~$1~~")
+      .replace(/<code>(.*?)<\/code>/gi, "`$1`")
+      .replace(/<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, "```\n$1\n```\n")
+      .replace(/<blockquote>([\s\S]*?)<\/blockquote>/gi, function (_, t) {
+        return t.trim().split("\n").map(function (l) { return "> " + l; }).join("\n") + "\n\n";
+      })
+      .replace(/<a href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
+      .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, "![]($1)")
+      .replace(/<li>(.*?)<\/li>/gi, "- $1\n")
+      .replace(/<\/?[uo]l>/gi, "")
+      .replace(/<hr\s*\/?>/gi, "\n---\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .trim();
   }
 
   function uploadImage(file) {
