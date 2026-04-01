@@ -295,7 +295,7 @@
 
     var body = document.createElement("div");
     body.className = "glr-note__body";
-    body.innerHTML = note.body;
+    body.innerHTML = stripFilePrefix(note.body);
     noteEl.appendChild(body);
 
     return noteEl;
@@ -464,6 +464,14 @@
   }
 
   // --- Helpers ---
+
+  function stripFilePrefix(html) {
+    // Remove **file.md:123**\n\n or <strong>file.md:123</strong> prefix from note body
+    if (!html) return html;
+    return html
+      .replace(/^<p><strong>[^<]+:\d+<\/strong><\/p>\n*/, "")
+      .replace(/^<p><code>[^<]+:\d+<\/code><\/p>\n*/, "");
+  }
 
   function findDiscussionsForLine(file, line) {
     var tag1 = "`" + file + ":" + line + "`";
