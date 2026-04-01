@@ -327,13 +327,14 @@
 
     var body = document.createElement("div");
     body.className = "glr-note__body";
-    var cleaned = stripFilePrefix(note.body);
-    if (cleaned && cleaned.charAt(0) === "<") {
-      body.innerHTML = fixRelativeUrls(cleaned);
-    } else {
-      body.innerHTML = renderMd(cleaned);
-    }
+    body.innerHTML = '<span style="color:#999">Завантаження...</span>';
     noteEl.appendChild(body);
+
+    // Render via GitLab Markdown API for proper signed image URLs
+    var cleaned = stripFilePrefix(note.body);
+    renderViaGitlab(cleaned).then(function (html) {
+      body.innerHTML = html;
+    });
 
     return noteEl;
   }
@@ -767,6 +768,25 @@
       // Single newline → <br>
       .replace(/\n/g, "<br>");
     return "<p>" + html + "</p>";
+  }
+
+  function renderViaGitlab(markdown) {
+    if (!markdown) return Promise.resolve("");
+    // If already HTML, just fix URLs
+    if (markdown.charAt(0) === "<") return Promise.resolve(fixRelativeUrls(markdown));
+
+    // Use GitLab Markdown API — returns HTML with signed image URLs
+    if (OAuth.isLoggedIn()) {
+      return OAuth.apiFetch(
+        "/projects/" + config.project_id + "/markdown",
+        { method: "POST", body: JSON.stringify({ text: markdown, gfm: true }) }
+      ).then(function (data) {
+        return (data && data.html) ? data.html : renderMd(markdown);
+      }).catch(function () {
+        return renderMd(markdown);
+      });
+    }
+    return Promise.resolve(renderMd(markdown));
   }
 
   function fixRelativeUrls(html) {
