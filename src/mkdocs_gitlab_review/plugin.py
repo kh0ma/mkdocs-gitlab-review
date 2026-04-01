@@ -130,24 +130,12 @@ class GitLabReviewPlugin(BasePlugin):
         parts.append(
             '<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>'
         )
-        # TipTap WYSIWYG editor via CDN (UMD builds)
+        # Quill.js WYSIWYG editor
         parts.append(
-            '<script src="https://cdn.jsdelivr.net/npm/@tiptap/core@2/dist/index.umd.js"></script>'
+            '<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">'
         )
         parts.append(
-            '<script src="https://cdn.jsdelivr.net/npm/@tiptap/starter-kit@2/dist/index.umd.js"></script>'
-        )
-        parts.append(
-            '<script src="https://cdn.jsdelivr.net/npm/@tiptap/extension-link@2/dist/index.umd.js"></script>'
-        )
-        parts.append(
-            '<script src="https://cdn.jsdelivr.net/npm/@tiptap/extension-image@2/dist/index.umd.js"></script>'
-        )
-        parts.append(
-            '<script src="https://cdn.jsdelivr.net/npm/@tiptap/extension-placeholder@2/dist/index.umd.js"></script>'
-        )
-        parts.append(
-            '<script src="https://cdn.jsdelivr.net/npm/@tiptap/extension-underline@2/dist/index.umd.js"></script>'
+            '<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>'
         )
 
         # CSS

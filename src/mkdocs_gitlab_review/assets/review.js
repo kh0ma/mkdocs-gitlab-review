@@ -369,172 +369,112 @@
     return "<p>" + text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>") + "</p>";
   }
 
-  // --- Editor (TipTap WYSIWYG) ---
-
-  function getTipTap() {
-    // TipTap UMD globals
-    var w = window;
-    return {
-      Editor: (w.tiptapCore || w["@tiptap/core"]).Editor,
-      StarterKit: (w.tiptapStarterKit || w["@tiptap/starter-kit"]).StarterKit,
-      Link: (w.tiptapExtensionLink || w["@tiptap/extension-link"]).Link,
-      Image: (w.tiptapExtensionImage || w["@tiptap/extension-image"]).Image,
-      Placeholder: (w.tiptapExtensionPlaceholder || w["@tiptap/extension-placeholder"]).Placeholder,
-      Underline: (w.tiptapExtensionUnderline || w["@tiptap/extension-underline"]).Underline,
-    };
-  }
+  // --- Editor (Quill.js WYSIWYG) ---
 
   function createEditor(placeholder) {
-    var tt = getTipTap();
     var wrapper = document.createElement("div");
     wrapper.className = "glr-editor";
 
-    // Toolbar
-    var toolbar = document.createElement("div");
-    toolbar.className = "glr-editor__toolbar";
+    var editorContainer = document.createElement("div");
+    editorContainer.className = "glr-editor__quill";
+    wrapper.appendChild(editorContainer);
 
-    var btnDefs = [
-      { action: "bold", icon: "<b>B</b>", title: "Bold" },
-      { action: "italic", icon: "<i>I</i>", title: "Italic" },
-      { action: "underline", icon: "<u>U</u>", title: "Underline" },
-      { action: "strike", icon: "<s>S</s>", title: "Strikethrough" },
-      { sep: true },
-      { action: "heading", icon: "H", title: "Heading", level: 3 },
-      { action: "bulletList", icon: "\u2022", title: "Bullet list" },
-      { action: "orderedList", icon: "1.", title: "Numbered list" },
-      { sep: true },
-      { action: "blockquote", icon: "\u275D", title: "Quote" },
-      { action: "code", icon: "&lt;/&gt;", title: "Code" },
-      { action: "codeBlock", icon: "{}", title: "Code block" },
-      { action: "link", icon: "\uD83D\uDD17", title: "Link" },
-      { action: "image", icon: "\uD83D\uDDBC", title: "Image" },
-      { action: "horizontalRule", icon: "\u2015", title: "Horizontal rule" },
-    ];
+    var quill = null;
 
-    var tipTapEditor = null;
-
-    btnDefs.forEach(function (b) {
-      if (b.sep) {
-        var sep = document.createElement("span");
-        sep.className = "glr-editor__sep";
-        toolbar.appendChild(sep);
-        return;
-      }
-      var btn = document.createElement("button");
-      btn.className = "glr-editor__btn";
-      btn.innerHTML = b.icon;
-      btn.title = b.title;
-      btn.type = "button";
-      btn.addEventListener("click", function (e) {
-        e.preventDefault();
-        if (!tipTapEditor) return;
-        var chain = tipTapEditor.chain().focus();
-        switch (b.action) {
-          case "bold": chain.toggleBold().run(); break;
-          case "italic": chain.toggleItalic().run(); break;
-          case "underline": chain.toggleUnderline().run(); break;
-          case "strike": chain.toggleStrike().run(); break;
-          case "heading": chain.toggleHeading({ level: b.level }).run(); break;
-          case "bulletList": chain.toggleBulletList().run(); break;
-          case "orderedList": chain.toggleOrderedList().run(); break;
-          case "blockquote": chain.toggleBlockquote().run(); break;
-          case "code": chain.toggleCode().run(); break;
-          case "codeBlock": chain.toggleCodeBlock().run(); break;
-          case "horizontalRule": chain.setHorizontalRule().run(); break;
-          case "link":
-            var url = prompt("URL:");
-            if (url) chain.setLink({ href: url }).run();
-            break;
-          case "image":
-            var input = document.createElement("input");
-            input.type = "file";
-            input.accept = "image/*";
-            input.addEventListener("change", function () {
-              if (input.files && input.files[0]) {
-                uploadImage(input.files[0]).then(function (imgUrl) {
-                  if (imgUrl) tipTapEditor.chain().focus().setImage({ src: imgUrl }).run();
-                });
-              }
-            });
-            input.click();
-            break;
-        }
-      });
-      toolbar.appendChild(btn);
-    });
-
-    wrapper.appendChild(toolbar);
-
-    // Editor content area
-    var editorEl = document.createElement("div");
-    editorEl.className = "glr-editor__content";
-    wrapper.appendChild(editorEl);
-
-    // Initialize TipTap after DOM attachment
+    // Init Quill after DOM attachment
     setTimeout(function () {
-      tipTapEditor = new tt.Editor({
-        element: editorEl,
-        extensions: [
-          tt.StarterKit,
-          tt.Link.configure({ openOnClick: false }),
-          tt.Image.configure({ inline: true }),
-          tt.Placeholder.configure({ placeholder: placeholder || "Написати коментар..." }),
-          tt.Underline,
-        ],
-        content: "",
-        editorProps: {
-          handlePaste: function (view, event) {
-            var items = (event.clipboardData || {}).items;
-            if (!items) return false;
-            for (var i = 0; i < items.length; i++) {
-              if (items[i].type.indexOf("image/") === 0) {
-                event.preventDefault();
-                var file = items[i].getAsFile();
-                uploadImage(file).then(function (imgUrl) {
-                  if (imgUrl) tipTapEditor.chain().focus().setImage({ src: imgUrl }).run();
-                });
-                return true;
-              }
-            }
-            return false;
-          },
-          handleDrop: function (view, event) {
-            var files = event.dataTransfer && event.dataTransfer.files;
-            if (!files) return false;
-            for (var i = 0; i < files.length; i++) {
-              if (files[i].type.indexOf("image/") === 0) {
-                event.preventDefault();
-                (function (f) {
-                  uploadImage(f).then(function (imgUrl) {
-                    if (imgUrl) tipTapEditor.chain().focus().setImage({ src: imgUrl }).run();
-                  });
-                })(files[i]);
-                return true;
-              }
-            }
-            return false;
-          },
+      if (typeof Quill === "undefined") return;
+
+      quill = new Quill(editorContainer, {
+        theme: "snow",
+        placeholder: placeholder || "Написати коментар...",
+        modules: {
+          toolbar: [
+            ["bold", "italic", "underline", "strike"],
+            [{ header: 3 }, "blockquote", "code-block"],
+            [{ list: "ordered" }, { list: "bullet" }],
+            ["link", "image"],
+            ["clean"],
+          ],
         },
       });
+
+      // Override image handler for GitLab upload
+      quill.getModule("toolbar").addHandler("image", function () {
+        var input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.addEventListener("change", function () {
+          if (input.files && input.files[0]) {
+            uploadAndInsertImage(quill, input.files[0]);
+          }
+        });
+        input.click();
+      });
+
+      // Image paste
+      editorContainer.addEventListener("paste", function (e) {
+        var items = (e.clipboardData || {}).items;
+        if (!items) return;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image/") === 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadAndInsertImage(quill, items[i].getAsFile());
+            return;
+          }
+        }
+      }, true);
+
+      // Image drop
+      editorContainer.addEventListener("drop", function (e) {
+        var files = e.dataTransfer && e.dataTransfer.files;
+        if (!files) return;
+        for (var i = 0; i < files.length; i++) {
+          if (files[i].type.indexOf("image/") === 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadAndInsertImage(quill, files[i]);
+            return;
+          }
+        }
+      }, true);
     }, 0);
 
     return {
       el: wrapper,
       getMarkdown: function () {
-        if (!tipTapEditor) return "";
-        return htmlToMarkdown(tipTapEditor.getHTML());
+        if (!quill) return "";
+        return quillToMarkdown(quill);
       },
       clear: function () {
-        if (tipTapEditor) tipTapEditor.commands.clearContent();
+        if (quill) quill.setText("");
       },
       focus: function () {
-        if (tipTapEditor) tipTapEditor.commands.focus();
+        if (quill) quill.focus();
       },
     };
   }
 
-  function htmlToMarkdown(html) {
-    if (!html || html === "<p></p>") return "";
+  function uploadAndInsertImage(quill, file) {
+    var range = quill.getSelection(true);
+    quill.insertText(range.index, "Завантаження...", { italic: true });
+
+    uploadImage(file).then(function (url) {
+      // Remove placeholder
+      quill.deleteText(range.index, "Завантаження...".length);
+      if (url) {
+        quill.insertEmbed(range.index, "image", url);
+        quill.setSelection(range.index + 1);
+      }
+    });
+  }
+
+  function quillToMarkdown(quill) {
+    // Convert Quill delta to markdown
+    var html = quill.root.innerHTML;
+    if (!html || html === "<p><br></p>") return "";
+
     return html
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/p>\s*<p>/gi, "\n\n")
@@ -548,13 +488,14 @@
       .replace(/<del>(.*?)<\/del>/gi, "~~$1~~")
       .replace(/<s>(.*?)<\/s>/gi, "~~$1~~")
       .replace(/<code>(.*?)<\/code>/gi, "`$1`")
-      .replace(/<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, "```\n$1\n```\n")
+      .replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, "\n```\n$1\n```\n")
+      .replace(/<pre[^>]*class="ql-syntax"[^>]*>([\s\S]*?)<\/pre>/gi, "\n```\n$1\n```\n")
       .replace(/<blockquote>([\s\S]*?)<\/blockquote>/gi, function (_, t) {
         return t.trim().split("\n").map(function (l) { return "> " + l; }).join("\n") + "\n\n";
       })
       .replace(/<a href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
-      .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, "![]($1)")
-      .replace(/<li>(.*?)<\/li>/gi, "- $1\n")
+      .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, "\n![]($1)\n")
+      .replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n")
       .replace(/<\/?[uo]l>/gi, "")
       .replace(/<hr\s*\/?>/gi, "\n---\n")
       .replace(/<[^>]+>/g, "")
