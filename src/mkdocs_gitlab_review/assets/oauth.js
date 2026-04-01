@@ -64,18 +64,7 @@ window.GitLabOAuth = (function () {
 
     sha256(verifier).then(function (hash) {
       var challenge = base64UrlEncode(hash);
-      // Always redirect to the registered OAuth callback (site root)
-      var base = document.querySelector('link[rel="canonical"]');
-      var siteRoot = base ? new URL("/", base.href).origin + new URL("/", base.href).pathname.replace(/\/[^/]*$/, "/") : window.location.origin + "/";
-      // Use site root from config base if available
-      var configEl = document.getElementById("__config");
-      if (configEl) {
-        try {
-          var mkdocsConfig = JSON.parse(configEl.textContent);
-          if (mkdocsConfig.base) siteRoot = window.location.origin + mkdocsConfig.base;
-        } catch (_) {}
-      }
-      var redirectUri = siteRoot.replace(/\/$/, "") + "/";
+      var redirectUri = config.site_url || (window.location.origin + "/");
       // Save current page to return after auth
       sessionStorage.setItem(RETURN_KEY, window.location.href);
       var url = config.gitlab_url + "/oauth/authorize" +
@@ -106,8 +95,7 @@ window.GitLabOAuth = (function () {
     sessionStorage.removeItem(VERIFIER_KEY);
 
     var config = getConfig();
-    // Must match the redirect_uri used in the authorize request (site root)
-    var redirectUri = window.location.origin + window.location.pathname.replace(/\?.*$/, "");
+    var redirectUri = config.site_url || (window.location.origin + "/");
 
     var body = "grant_type=authorization_code" +
       "&code=" + encodeURIComponent(code) +
