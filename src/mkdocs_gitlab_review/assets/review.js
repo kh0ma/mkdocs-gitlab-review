@@ -520,17 +520,10 @@
     )
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
-        if (data && data.full_path) {
-          // full_path is the most reliable — includes project path
-          return config.gitlab_url + data.full_path;
-        }
-        if (data && data.url) {
-          if (data.url.startsWith("http")) return data.url;
-          // GitLab upload URLs need /-/ prefix in project context
-          var base = config.project_url || config.gitlab_url;
-          var uploadPath = data.url; // e.g. /uploads/hash/image.png
-          return base.replace(/\/$/, "") + "/-" + uploadPath;
-        }
+        // Return relative URL — GitLab expects this in markdown comments
+        // e.g. /uploads/hash/image.png
+        if (data && data.url) return data.url;
+        return null;
         return null;
       })
       .catch(function () { return null; });
