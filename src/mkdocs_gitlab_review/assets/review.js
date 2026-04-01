@@ -65,7 +65,7 @@
   function activateReview(toggleBtn) {
     state.reviewActive = true;
     toggleBtn.classList.add("glr-toolbar-btn--active");
-    toggleBtn.querySelector(".glr-toolbar-btn__label").textContent = "Рев'ю ON";
+    toggleBtn.querySelector(".glr-toolbar-btn__label").innerHTML = "\u25CF Рев'ю";
     toggleBtn.title = "Вимкнути рев'ю";
 
     Promise.all([

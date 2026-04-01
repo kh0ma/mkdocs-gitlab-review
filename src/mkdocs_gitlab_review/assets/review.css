@@ -360,12 +360,18 @@
 .glr-toolbar-btn--active {
   background: var(--md-accent-fg-color, #536dfe);
   border-color: var(--md-accent-fg-color, #536dfe);
-  color: #fff;
+  color: #fff !important;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(83, 109, 254, 0.4);
 }
 
 .glr-toolbar-btn--active:hover {
   opacity: 0.9;
-  color: #fff;
+  color: #fff !important;
+}
+
+.glr-toolbar-btn--active svg {
+  fill: #fff;
 }
 
 /* Review button — special styling when not active */
