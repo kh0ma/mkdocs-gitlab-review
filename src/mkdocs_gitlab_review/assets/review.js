@@ -460,14 +460,32 @@
     var range = quill.getSelection(true);
     quill.insertText(range.index, "Завантаження...", { italic: true });
 
-    uploadImage(file).then(function (url) {
-      // Remove placeholder
-      quill.deleteText(range.index, "Завантаження...".length);
-      if (url) {
-        quill.insertEmbed(range.index, "image", url);
-        quill.setSelection(range.index + 1);
-      }
-    });
+    // Get image dimensions
+    var img = new Image();
+    var blobUrl = URL.createObjectURL(file);
+
+    img.onload = function () {
+      var w = img.naturalWidth;
+      var h = img.naturalHeight;
+      URL.revokeObjectURL(blobUrl);
+
+      uploadImage(file).then(function (url) {
+        quill.deleteText(range.index, "Завантаження...".length);
+        if (url) {
+          // Store dimensions as data attribute via Quill embed
+          quill.insertEmbed(range.index, "image", url);
+          // Store dimensions for markdown conversion
+          var imgEl = quill.root.querySelector('img[src="' + url + '"]');
+          if (imgEl) {
+            imgEl.setAttribute("data-width", w);
+            imgEl.setAttribute("data-height", h);
+            imgEl.style.maxWidth = "100%";
+          }
+          quill.setSelection(range.index + 1);
+        }
+      });
+    };
+    img.src = blobUrl;
   }
 
   function quillToMarkdown(quill) {
@@ -494,7 +512,13 @@
         return t.trim().split("\n").map(function (l) { return "> " + l; }).join("\n") + "\n\n";
       })
       .replace(/<a href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
-      .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, "\n![]($1)\n")
+      .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, function (match, src) {
+        var wMatch = match.match(/data-width="(\d+)"/);
+        var hMatch = match.match(/data-height="(\d+)"/);
+        var dims = "";
+        if (wMatch && hMatch) dims = "{width=" + wMatch[1] + " height=" + hMatch[1] + "}";
+        return "\n![image](" + src + ")" + dims + "\n";
+      })
       .replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n")
       .replace(/<\/?[uo]l>/gi, "")
       .replace(/<hr\s*\/?>/gi, "\n---\n")
