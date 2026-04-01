@@ -308,7 +308,12 @@
 
     var body = document.createElement("div");
     body.className = "glr-note__body";
-    body.innerHTML = stripFilePrefix(note.body);
+    var cleaned = stripFilePrefix(note.body);
+    if (cleaned && cleaned.charAt(0) === "<") {
+      body.innerHTML = cleaned;
+    } else {
+      body.textContent = cleaned;
+    }
     noteEl.appendChild(body);
 
     return noteEl;
@@ -484,12 +489,20 @@
       // Raw markdown: **file:N**\n\n or `file:N`\n\n
       .replace(/^\*\*[^*]+?:\d+\*\*\s*/, "")
       .replace(/^`[^`]+?:\d+`\s*/, "")
-      // HTML: <p><strong>file:N</strong></p>
+      // HTML rendered by GitLab — various structures:
+      // <p><strong>file:N</strong></p>\n<p>text</p>
       .replace(/^<p><strong>[^<]+?:\d+<\/strong><\/p>\s*/i, "")
       .replace(/^<p><code>[^<]+?:\d+<\/code><\/p>\s*/i, "")
-      // HTML inline: <p><strong>file:N</strong><br>...
+      // <p><strong>file:N</strong></p> text
+      .replace(/^<p><strong>[^<]+?:\d+<\/strong><\/p>/i, "")
+      .replace(/^<p><code>[^<]+?:\d+<\/code><\/p>/i, "")
+      // <p><strong>file:N</strong><br>text</p>
       .replace(/^(<p>)<strong>[^<]+?:\d+<\/strong>\s*(?:<br\s*\/?>)?\s*/i, "$1")
-      .replace(/^(<p>)<code>[^<]+?:\d+<\/code>\s*(?:<br\s*\/?>)?\s*/i, "$1");
+      .replace(/^(<p>)<code>[^<]+?:\d+<\/code>\s*(?:<br\s*\/?>)?\s*/i, "$1")
+      // <p><a ...><strong>file:N</strong></a></p> (GitLab may linkify)
+      .replace(/^<p><a[^>]*><strong>[^<]+?:\d+<\/strong><\/a><\/p>\s*/i, "")
+      // Trim leading whitespace/newlines left over
+      .replace(/^\s+/, "");
   }
 
   function findDiscussionsForLine(file, line) {
