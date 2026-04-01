@@ -166,7 +166,7 @@
 
       if (file !== state.currentFile) return;
 
-      var canComment = isChanged && (fileInfo.new_file || fileInfo.new_lines.has(line));
+      var canComment = isChanged;
       var discussions = findDiscussionsForLine(file, line);
 
       // Add comment gutter icon
@@ -400,15 +400,25 @@
     var payload = { body: body };
 
     if (state.diffRefs && fileInfo) {
-      payload.position = {
+      var position = {
         position_type: "text",
         base_sha: state.diffRefs.base_sha,
         start_sha: state.diffRefs.start_sha,
         head_sha: state.diffRefs.head_sha,
         old_path: fileInfo.old_path,
         new_path: fileInfo.new_path,
-        new_line: line,
       };
+
+      if (fileInfo.new_file || fileInfo.new_lines.has(line)) {
+        // Added line — only new_line
+        position.new_line = line;
+      } else {
+        // Context line — both old and new
+        position.old_line = line;
+        position.new_line = line;
+      }
+
+      payload.position = position;
     }
 
     return OAuth.apiFetch(
