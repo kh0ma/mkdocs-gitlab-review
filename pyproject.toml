@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mkdocs-gitlab-review"
+version = "0.1.0"
+description = "MkDocs plugin for inline GitLab MR review comments on rendered pages"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "mkdocs>=1.4",
+]
+
+[project.entry-points."mkdocs.plugins"]
+gitlab-review = "mkdocs_gitlab_review.plugin:GitLabReviewPlugin"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mkdocs_gitlab_review = ["assets/*"]
