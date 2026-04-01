@@ -327,14 +327,16 @@
 
     var body = document.createElement("div");
     body.className = "glr-note__body";
-    body.innerHTML = '<span style="color:#999">Завантаження...</span>';
-    noteEl.appendChild(body);
 
-    // Render via GitLab Markdown API for proper signed image URLs
     var cleaned = stripFilePrefix(note.body);
-    renderViaGitlab(cleaned).then(function (html) {
-      body.innerHTML = html;
-    });
+    if (cleaned && cleaned.charAt(0) === "<") {
+      body.innerHTML = fixRelativeUrls(cleaned);
+    } else {
+      body.innerHTML = renderMd(cleaned);
+    }
+    // Load authenticated images
+    loadAuthImages(body);
+    noteEl.appendChild(body);
 
     return noteEl;
   }
@@ -770,23 +772,47 @@
     return "<p>" + html + "</p>";
   }
 
-  function renderViaGitlab(markdown) {
-    if (!markdown) return Promise.resolve("");
-    // If already HTML, just fix URLs
-    if (markdown.charAt(0) === "<") return Promise.resolve(fixRelativeUrls(markdown));
+  function loadAuthImages(container) {
+    // Find images pointing to GitLab uploads and load them with auth
+    var imgs = container.querySelectorAll("img");
+    var projectBase = (config.project_url || config.gitlab_url).replace(/\/$/, "");
 
-    // Use GitLab Markdown API — returns HTML with signed image URLs
-    if (OAuth.isLoggedIn()) {
-      return OAuth.apiFetch(
-        "/projects/" + config.project_id + "/markdown",
-        { method: "POST", body: JSON.stringify({ text: markdown, gfm: true }) }
-      ).then(function (data) {
-        return (data && data.html) ? data.html : renderMd(markdown);
-      }).catch(function () {
-        return renderMd(markdown);
-      });
-    }
-    return Promise.resolve(renderMd(markdown));
+    imgs.forEach(function (img) {
+      var src = img.getAttribute("src") || "";
+      // Match GitLab upload URLs (relative or absolute)
+      if (src.indexOf("/uploads/") !== -1) {
+        var fullUrl = src;
+        if (!src.startsWith("http")) {
+          fullUrl = projectBase + (src.startsWith("/") ? "" : "/") + src;
+        }
+        img.setAttribute("data-original-src", src);
+        img.src = ""; // clear to prevent 404
+        img.alt = "Завантаження...";
+        img.style.minHeight = "2rem";
+        img.style.background = "var(--md-default-fg-color--lightest, #f0f0f0)";
+
+        var token = OAuth.getToken();
+        if (token) {
+          fetch(fullUrl, {
+            headers: { "Authorization": "Bearer " + token }
+          })
+            .then(function (r) { return r.ok ? r.blob() : null; })
+            .then(function (blob) {
+              if (blob) {
+                img.src = URL.createObjectURL(blob);
+                img.alt = "";
+                img.style.minHeight = "";
+                img.style.background = "";
+              } else {
+                img.alt = "Зображення недоступне";
+              }
+            })
+            .catch(function () {
+              img.alt = "Зображення недоступне";
+            });
+        }
+      }
+    });
   }
 
   function fixRelativeUrls(html) {
