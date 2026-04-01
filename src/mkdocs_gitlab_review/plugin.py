@@ -69,12 +69,13 @@ class GitLabReviewPlugin(BasePlugin):
             return html
 
         src_path = page.file.src_path
+        git_path = self._resolve_git_path(src_path, config)
         line_map = self._line_maps.get(src_path, {})
 
         if not line_map:
             return html
 
-        return annotate_html(html, src_path, line_map)
+        return annotate_html(html, git_path, line_map)
 
     def on_post_page(self, output, /, *, page, config):
         """Inject JS/CSS assets and plugin config into rendered page."""
@@ -87,6 +88,30 @@ class GitLabReviewPlugin(BasePlugin):
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
+
+    def _resolve_git_path(self, src_path: str, config) -> str:
+        """Resolve MkDocs src_path to the actual git-relative file path.
+
+        Handles symlinks and the docs_dir prefix so that the path matches
+        what appears in git diff / GitLab MR changes.
+        """
+        docs_dir = Path(config["docs_dir"])
+        abs_path = docs_dir / src_path
+
+        # Resolve symlinks to get the real file
+        try:
+            real_path = abs_path.resolve()
+        except OSError:
+            real_path = abs_path
+
+        # Make relative to the git repo root (parent of docs_dir, typically)
+        # Try to find the git root by walking up
+        git_root = docs_dir.parent
+        try:
+            return str(real_path.relative_to(git_root))
+        except ValueError:
+            # Fallback: return with docs/ prefix
+            return str(Path("docs") / src_path)
 
     def _build_injection(self) -> str:
         """Build the HTML to inject before </body>."""
