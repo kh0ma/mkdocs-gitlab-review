@@ -175,7 +175,7 @@
 
       if (file !== state.currentFile) return;
 
-      var canComment = isChanged;
+      var canComment = true;
       var discussions = findDiscussionsForLine(file, line);
 
       // Add comment gutter icon
@@ -195,19 +195,15 @@
       }
 
       // Click "+" to add comment
-      if (canComment) {
-        var addBtn = document.createElement("span");
-        addBtn.className = "glr-add-btn";
-        addBtn.textContent = "+";
-        addBtn.title = "Додати коментар";
-        addBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          toggleThreads(block, file, line, discussions, canComment);
-        });
-        block.appendChild(addBtn);
-      } else if (!isChanged) {
-        block.title = "Файл не змінено в цьому MR";
-      }
+      var addBtn = document.createElement("span");
+      addBtn.className = "glr-add-btn";
+      addBtn.textContent = "+";
+      addBtn.title = "Додати коментар";
+      addBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        toggleThreads(block, file, line, discussions, canComment);
+      });
+      block.appendChild(addBtn);
     });
 
     // Render file status banner
@@ -225,7 +221,7 @@
       banner.textContent = "Файл змінено в цьому MR";
     } else {
       banner.classList.add("glr-file-status--unchanged");
-      banner.textContent = "Файл не змінено в цьому MR — коментарі недоступні";
+      banner.textContent = "Файл не змінено в цьому MR";
     }
     var content = document.querySelector(".md-content__inner");
     if (content) content.insertBefore(banner, content.firstChild);
@@ -470,7 +466,8 @@
   // --- Helpers ---
 
   function findDiscussionsForLine(file, line) {
-    var tag = "`" + file + ":" + line + "`";
+    var tag1 = "`" + file + ":" + line + "`";
+    var tag2 = "**" + file + ":" + line + "**";
     return state.discussions.filter(function (d) {
       var firstNote = d.notes && d.notes[0];
       if (!firstNote) return false;
@@ -480,7 +477,8 @@
         return pos.new_path === file && pos.new_line === line;
       }
       // Match general discussions with file:line prefix
-      return firstNote.body && firstNote.body.indexOf(tag) === 0;
+      if (!firstNote.body) return false;
+      return firstNote.body.indexOf(tag1) === 0 || firstNote.body.indexOf(tag2) === 0;
     });
   }
 
