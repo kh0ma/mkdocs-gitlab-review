@@ -160,6 +160,7 @@
   border: none !important;
   font-family: inherit;
   font-size: 0.85rem;
+  overflow: visible !important;
 }
 
 .glr-editor .ql-editor {
@@ -168,6 +169,16 @@
   overflow-y: auto;
   padding: 0.5rem;
   line-height: 1.6;
+}
+
+/* Quill tooltip (link editor) — keep visible */
+.glr-editor .ql-tooltip {
+  z-index: 10;
+}
+
+.glr-editor .ql-snow .ql-tooltip {
+  left: 0 !important;
+  transform: none !important;
 }
 
 .glr-editor .ql-editor.ql-blank::before {
