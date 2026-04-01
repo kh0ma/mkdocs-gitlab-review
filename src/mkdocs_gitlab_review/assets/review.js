@@ -472,10 +472,14 @@
       uploadImage(file).then(function (url) {
         quill.deleteText(range.index, "Завантаження...".length);
         if (url) {
-          // Store dimensions as data attribute via Quill embed
-          quill.insertEmbed(range.index, "image", url);
-          // Store dimensions for markdown conversion
-          var imgEl = quill.root.querySelector('img[src="' + url + '"]');
+          // For display in editor: use full URL with /-/ prefix
+          var displayUrl = url;
+          if (url.startsWith("/uploads/")) {
+            var base = (config.project_url || config.gitlab_url).replace(/\/$/, "");
+            displayUrl = base + "/-" + url;
+          }
+          quill.insertEmbed(range.index, "image", displayUrl);
+          var imgEl = quill.root.querySelector('img[src="' + displayUrl + '"]');
           if (imgEl) {
             imgEl.setAttribute("data-width", w);
             imgEl.setAttribute("data-height", h);
