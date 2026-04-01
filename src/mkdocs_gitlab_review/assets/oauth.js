@@ -8,6 +8,7 @@ window.GitLabOAuth = (function () {
   var TOKEN_KEY = "gitlab-review-token";
   var STATE_KEY = "gitlab-review-state";
   var VERIFIER_KEY = "gitlab-review-verifier";
+  var RETURN_KEY = "gitlab-review-return";
 
   function getConfig() {
     return window.__GITLAB_REVIEW__ || {};
@@ -63,7 +64,20 @@ window.GitLabOAuth = (function () {
 
     sha256(verifier).then(function (hash) {
       var challenge = base64UrlEncode(hash);
-      var redirectUri = window.location.origin + window.location.pathname;
+      // Always redirect to the registered OAuth callback (site root)
+      var base = document.querySelector('link[rel="canonical"]');
+      var siteRoot = base ? new URL("/", base.href).origin + new URL("/", base.href).pathname.replace(/\/[^/]*$/, "/") : window.location.origin + "/";
+      // Use site root from config base if available
+      var configEl = document.getElementById("__config");
+      if (configEl) {
+        try {
+          var mkdocsConfig = JSON.parse(configEl.textContent);
+          if (mkdocsConfig.base) siteRoot = window.location.origin + mkdocsConfig.base;
+        } catch (_) {}
+      }
+      var redirectUri = siteRoot.replace(/\/$/, "") + "/";
+      // Save current page to return after auth
+      sessionStorage.setItem(RETURN_KEY, window.location.href);
       var url = config.gitlab_url + "/oauth/authorize" +
         "?client_id=" + encodeURIComponent(config.oauth_client_id) +
         "&redirect_uri=" + encodeURIComponent(redirectUri) +
@@ -92,7 +106,8 @@ window.GitLabOAuth = (function () {
     sessionStorage.removeItem(VERIFIER_KEY);
 
     var config = getConfig();
-    var redirectUri = window.location.origin + window.location.pathname;
+    // Must match the redirect_uri used in the authorize request (site root)
+    var redirectUri = window.location.origin + window.location.pathname.replace(/\?.*$/, "");
 
     var body = "grant_type=authorization_code" +
       "&code=" + encodeURIComponent(code) +
@@ -109,9 +124,14 @@ window.GitLabOAuth = (function () {
       .then(function (data) {
         if (data.access_token) {
           setToken(data.access_token);
-          // Clean URL params
-          var clean = window.location.pathname + window.location.hash;
-          window.history.replaceState(null, "", clean);
+          // Return to the page where login was initiated
+          var returnUrl = sessionStorage.getItem(RETURN_KEY);
+          sessionStorage.removeItem(RETURN_KEY);
+          if (returnUrl) {
+            window.location.href = returnUrl;
+          } else {
+            window.history.replaceState(null, "", window.location.pathname);
+          }
           return true;
         }
         return false;
