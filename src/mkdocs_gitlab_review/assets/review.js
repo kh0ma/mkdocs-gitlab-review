@@ -478,16 +478,16 @@
 
   // --- Helpers ---
 
-  function stripFilePrefix(html) {
-    if (!html) return html;
-    // GitLab renders markdown to HTML. The prefix **file:N** or `file:N`
-    // may appear as its own <p> or inline within the first <p>.
-    // Remove all variations:
-    return html
-      // Separate paragraph: <p><strong>file:N</strong></p>
+  function stripFilePrefix(text) {
+    if (!text) return text;
+    return text
+      // Raw markdown: **file:N**\n\n or `file:N`\n\n
+      .replace(/^\*\*[^*]+?:\d+\*\*\s*/, "")
+      .replace(/^`[^`]+?:\d+`\s*/, "")
+      // HTML: <p><strong>file:N</strong></p>
       .replace(/^<p><strong>[^<]+?:\d+<\/strong><\/p>\s*/i, "")
       .replace(/^<p><code>[^<]+?:\d+<\/code><\/p>\s*/i, "")
-      // Inline at start of paragraph: <p><strong>file:N</strong><br>\n...
+      // HTML inline: <p><strong>file:N</strong><br>...
       .replace(/^(<p>)<strong>[^<]+?:\d+<\/strong>\s*(?:<br\s*\/?>)?\s*/i, "$1")
       .replace(/^(<p>)<code>[^<]+?:\d+<\/code>\s*(?:<br\s*\/?>)?\s*/i, "$1");
   }
