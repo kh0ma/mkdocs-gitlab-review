@@ -16,51 +16,30 @@
   border-left-color: var(--md-accent-fg-color, #536dfe);
 }
 
-/* Add comment button */
-.glr-add-btn {
+/* Action button: +, number, or − */
+.glr-action-btn {
   display: none;
   position: absolute;
   right: 0;
   top: 0.15rem;
-  width: 1.4rem;
+  min-width: 1.4rem;
   height: 1.4rem;
-  border-radius: 50%;
+  border-radius: 0.7rem;
   background: var(--md-accent-fg-color, #536dfe);
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
   line-height: 1.4rem;
   text-align: center;
+  padding: 0 0.3rem;
   cursor: pointer;
   user-select: none;
   z-index: 2;
 }
 
-.glr-block--commentable:hover .glr-add-btn {
+.glr-block--commentable:hover .glr-action-btn,
+.glr-block--has-comments .glr-action-btn {
   display: block;
-}
-
-/* Comment count badge */
-.glr-badge {
-  position: absolute;
-  right: 0;
-  top: 0.15rem;
-  min-width: 1.2rem;
-  height: 1.2rem;
-  border-radius: 0.6rem;
-  background: var(--md-primary-fg-color, #4051b5);
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 1.2rem;
-  text-align: center;
-  padding: 0 0.3rem;
-  cursor: pointer;
-  z-index: 2;
-}
-
-/* When badge is present, shift add-btn left */
-.glr-block .glr-badge + .glr-add-btn {
-  right: 1.6rem;
 }
 
 /* --- Thread container --- */

@@ -180,33 +180,49 @@
 
       // Add comment gutter icon
       block.classList.add("glr-block");
-      if (canComment) block.classList.add("glr-block--commentable");
+      block.classList.add("glr-block--commentable");
 
-      // Render existing threads
-      if (discussions.length > 0) {
-        var badge = document.createElement("span");
-        badge.className = "glr-badge";
-        badge.textContent = String(discussions.length);
-        badge.addEventListener("click", function (e) {
-          e.stopPropagation();
-          toggleThreads(block, file, line, discussions, canComment);
-        });
-        block.appendChild(badge);
+      var btn = document.createElement("span");
+      btn.className = "glr-action-btn";
+      var isExpanded = false;
+      var count = discussions.length;
 
-        // Auto-expand on initial load
-        showThreads(block, file, line, discussions, canComment);
+      function updateBtn() {
+        if (isExpanded) {
+          btn.textContent = "−";
+          btn.title = "Згорнути";
+        } else if (count > 0) {
+          btn.textContent = String(count);
+          btn.title = "Показати коментарі";
+        } else {
+          btn.textContent = "+";
+          btn.title = "Додати коментар";
+        }
       }
 
-      // Click "+" to add comment
-      var addBtn = document.createElement("span");
-      addBtn.className = "glr-add-btn";
-      addBtn.textContent = "+";
-      addBtn.title = "Додати коментар";
-      addBtn.addEventListener("click", function (e) {
+      btn.addEventListener("click", function (e) {
         e.stopPropagation();
-        toggleThreads(block, file, line, discussions, canComment);
+        var existing = block.nextElementSibling;
+        if (existing && existing.classList.contains("glr-threads")) {
+          existing.remove();
+          isExpanded = false;
+          updateBtn();
+        } else {
+          showThreads(block, file, line, discussions, canComment);
+          isExpanded = true;
+          updateBtn();
+        }
       });
-      block.appendChild(addBtn);
+
+      block.appendChild(btn);
+
+      // Auto-expand on initial load if has comments
+      if (count > 0) {
+        block.classList.add("glr-block--has-comments");
+        showThreads(block, file, line, discussions, canComment);
+        isExpanded = true;
+      }
+      updateBtn();
     });
 
     // Render file status banner
@@ -239,15 +255,6 @@
   }
 
   // --- Thread UI ---
-
-  function toggleThreads(block, file, line, discussions, canComment) {
-    var existing = block.nextElementSibling;
-    if (existing && existing.classList.contains("glr-threads")) {
-      existing.remove();
-      return;
-    }
-    showThreads(block, file, line, discussions, canComment);
-  }
 
   function showThreads(block, file, line, discussions, canComment) {
     var container = document.createElement("div");
