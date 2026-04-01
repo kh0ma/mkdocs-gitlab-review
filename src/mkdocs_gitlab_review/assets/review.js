@@ -97,11 +97,12 @@
     ).then(function (data) {
       var changes = data.changes || [];
       changes.forEach(function (change) {
-        var newLines = parseDiffNewLines(change.diff || "");
+        var parsed = parseDiff(change.diff || "");
         state.changedFiles[change.new_path] = {
           old_path: change.old_path,
           new_path: change.new_path,
-          new_lines: newLines,
+          new_lines: parsed.new_lines,
+          lineMap: parsed.lineMap,
           new_file: change.new_file,
         };
       });
@@ -118,29 +119,46 @@
 
   // --- Diff parsing ---
 
-  function parseDiffNewLines(diff) {
-    // Parse unified diff to find new line numbers (added/changed lines)
+  function parseDiff(diff) {
+    // Parse unified diff to build old↔new line mapping
+    // Returns { new_lines: Set(added new_line numbers), lineMap: Map(new_line → {old_line, new_line, type}) }
     var lines = diff.split("\n");
     var newLines = new Set();
+    var lineMap = {};  // new_line → {old_line, new_line, type}
+    var oldLine = 0;
     var newLine = 0;
 
     lines.forEach(function (line) {
-      var hunkMatch = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+      var hunkMatch = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
       if (hunkMatch) {
-        newLine = parseInt(hunkMatch[1], 10);
+        oldLine = parseInt(hunkMatch[1], 10);
+        newLine = parseInt(hunkMatch[2], 10);
         return;
       }
       if (line.startsWith("+") && !line.startsWith("+++")) {
         newLines.add(newLine);
+        lineMap[newLine] = { old_line: null, new_line: newLine, type: "added" };
         newLine++;
       } else if (line.startsWith("-") && !line.startsWith("---")) {
-        // deleted line — don't increment newLine
-      } else {
+        oldLine++;
+      } else if (!line.startsWith("\\")) {
+        // Context line
+        lineMap[newLine] = { old_line: oldLine, new_line: newLine, type: "context" };
+        oldLine++;
         newLine++;
       }
     });
 
-    return newLines;
+    return { new_lines: newLines, lineMap: lineMap };
+  }
+
+  function sha1Hex(str) {
+    var encoder = new TextEncoder();
+    return crypto.subtle.digest("SHA-1", encoder.encode(str)).then(function (buf) {
+      return Array.from(new Uint8Array(buf)).map(function (b) {
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
   }
 
   // --- Rendering ---
@@ -404,34 +422,59 @@
   function postComment(file, line, body) {
     var fileInfo = state.changedFiles[file];
 
-    if (state.diffRefs && fileInfo && (fileInfo.new_file || fileInfo.new_lines.has(line))) {
-      // Added/changed line — post as inline diff comment
+    if (!state.diffRefs || !fileInfo) {
+      // No diff info — post as general discussion
+      var prefix = "`" + file + ":" + line + "`\n\n";
       return OAuth.apiFetch(
         "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            body: body,
-            position: {
-              position_type: "text",
-              base_sha: state.diffRefs.base_sha,
-              start_sha: state.diffRefs.start_sha,
-              head_sha: state.diffRefs.head_sha,
-              old_path: fileInfo.old_path,
-              new_path: fileInfo.new_path,
-              new_line: line,
-            },
-          }),
-        }
+        { method: "POST", body: JSON.stringify({ body: prefix + body }) }
       );
     }
 
-    // Unchanged line or no diff info — post as general discussion with file reference
-    var prefix = "`" + file + ":" + line + "`\n\n";
-    return OAuth.apiFetch(
-      "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
-      { method: "POST", body: JSON.stringify({ body: prefix + body }) }
-    );
+    // Resolve old_line/new_line from diff line mapping
+    var mapping = fileInfo.lineMap[line];
+    var oldL = mapping ? mapping.old_line : null;
+    var newL = mapping ? mapping.new_line : line;
+
+    // For lines not in any diff hunk, approximate: use same number for both
+    if (!mapping) {
+      oldL = line;
+      newL = line;
+    }
+
+    var position = {
+      position_type: "text",
+      base_sha: state.diffRefs.base_sha,
+      start_sha: state.diffRefs.start_sha,
+      head_sha: state.diffRefs.head_sha,
+      old_path: fileInfo.old_path,
+      new_path: fileInfo.new_path,
+    };
+
+    if (fileInfo.new_file || (mapping && mapping.type === "added")) {
+      position.new_line = newL;
+    } else {
+      if (oldL !== null) position.old_line = oldL;
+      position.new_line = newL;
+    }
+
+    // Compute line_code = sha1(file_path)_oldline_newline
+    return sha1Hex(fileInfo.new_path).then(function (hash) {
+      var oldStr = oldL !== null ? String(oldL) : "0";
+      var newStr = String(newL);
+      var lineCode = hash + "_" + oldStr + "_" + newStr;
+
+      var payload = {
+        body: body,
+        position: position,
+        line_code: lineCode,
+      };
+
+      return OAuth.apiFetch(
+        "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
+        { method: "POST", body: JSON.stringify(payload) }
+      );
+    });
   }
 
   function postReply(discussionId, body) {
