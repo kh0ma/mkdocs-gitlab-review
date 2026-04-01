@@ -309,37 +309,67 @@
   color: #e65100;
 }
 
-/* --- Login/logout buttons --- */
+/* --- Content toolbar --- */
 
-.glr-login-btn {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  padding: 0.6rem 1.2rem;
-  background: var(--md-primary-fg-color, #4051b5);
-  color: #fff;
-  border: none;
-  border-radius: 0.3rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  z-index: 100;
+.glr-content-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
 }
 
-.glr-login-btn:hover {
-  opacity: 0.9;
+.glr-content-toolbar__spacer {
+  flex: 1;
 }
 
-.glr-logout-btn {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  padding: 0.3rem 0.6rem;
-  background: var(--md-default-fg-color--lightest, #eee);
+.glr-content-toolbar__actions {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.glr-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--md-default-fg-color--lightest, #ddd);
+  border-radius: 0.25rem;
+  background: var(--md-default-bg-color, #fff);
   color: var(--md-default-fg-color--light, #666);
-  border: none;
-  border-radius: 0.2rem;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
+  font-family: inherit;
   cursor: pointer;
-  z-index: 100;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.glr-toolbar-btn:hover {
+  border-color: var(--md-accent-fg-color, #536dfe);
+  color: var(--md-accent-fg-color, #536dfe);
+}
+
+.glr-toolbar-btn svg {
+  flex-shrink: 0;
+}
+
+.glr-toolbar-btn__label {
+  line-height: 1;
+}
+
+/* Review toggle — active state */
+.glr-toolbar-btn--active {
+  background: var(--md-accent-fg-color, #536dfe);
+  border-color: var(--md-accent-fg-color, #536dfe);
+  color: #fff;
+}
+
+.glr-toolbar-btn--active:hover {
+  opacity: 0.9;
+  color: #fff;
+}
+
+/* Review button — special styling when not active */
+.glr-toolbar-btn--review {
+  border-color: var(--md-accent-fg-color, #536dfe);
+  color: var(--md-accent-fg-color, #536dfe);
 }

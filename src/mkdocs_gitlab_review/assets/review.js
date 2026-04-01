@@ -11,10 +11,11 @@
 
   var state = {
     mrIid: null,
-    diffRefs: null,       // {base_sha, start_sha, head_sha}
-    changedFiles: {},      // {filepath: {new_lines: Set, old_path, new_path}}
-    discussions: [],       // raw GitLab discussions
-    currentFile: null,     // source file of current page
+    diffRefs: null,
+    changedFiles: {},
+    discussions: [],
+    currentFile: null,
+    reviewActive: false,
   };
 
   // --- Init ---
@@ -35,22 +36,59 @@
 
       state.mrIid = mrIid;
       state.currentFile = detectCurrentFile();
-
       if (!state.currentFile) return;
 
-      if (!OAuth.isLoggedIn()) {
-        renderLoginButton();
-        return;
+      // Show review toggle button
+      var toggleBtn = document.getElementById("glr-review-toggle");
+      if (!toggleBtn) return;
+      toggleBtn.style.display = "";
+
+      if (OAuth.isLoggedIn()) {
+        // Auto-activate review mode
+        activateReview(toggleBtn);
       }
 
-      // Fetch MR data in parallel
-      Promise.all([
-        fetchDiffRefs(),
-        fetchChangedFiles(),
-        fetchDiscussions(),
-      ]).then(function () {
-        renderOverlay();
+      toggleBtn.addEventListener("click", function () {
+        if (!OAuth.isLoggedIn()) {
+          OAuth.login();
+          return;
+        }
+        if (state.reviewActive) {
+          deactivateReview(toggleBtn);
+        } else {
+          activateReview(toggleBtn);
+        }
       });
+    });
+  }
+
+  function activateReview(toggleBtn) {
+    state.reviewActive = true;
+    toggleBtn.classList.add("glr-toolbar-btn--active");
+    toggleBtn.querySelector(".glr-toolbar-btn__label").textContent = "Рев'ю ON";
+    toggleBtn.title = "Вимкнути рев'ю";
+
+    Promise.all([
+      fetchDiffRefs(),
+      fetchChangedFiles(),
+      fetchDiscussions(),
+    ]).then(function () {
+      renderOverlay();
+    });
+  }
+
+  function deactivateReview(toggleBtn) {
+    state.reviewActive = false;
+    toggleBtn.classList.remove("glr-toolbar-btn--active");
+    toggleBtn.querySelector(".glr-toolbar-btn__label").textContent = "Рев'ю";
+    toggleBtn.title = "Увімкнути рев'ю";
+
+    // Remove all overlay elements
+    document.querySelectorAll(".glr-block, .glr-block--commentable, .glr-block--has-comments").forEach(function (el) {
+      el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments");
+    });
+    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status").forEach(function (el) {
+      el.remove();
     });
   }
 
@@ -154,14 +192,6 @@
 
   // --- Rendering ---
 
-  function renderLoginButton() {
-    var btn = document.createElement("button");
-    btn.className = "glr-login-btn";
-    btn.textContent = "Увійти для рев'ю";
-    btn.addEventListener("click", function () { OAuth.login(); });
-    document.body.appendChild(btn);
-  }
-
   function renderOverlay() {
     var fileInfo = state.changedFiles[state.currentFile];
     var isChanged = !!fileInfo;
@@ -227,9 +257,6 @@
 
     // Render file status banner
     renderFileStatus(isChanged);
-
-    // Add logout button
-    renderLogoutButton();
   }
 
   function renderFileStatus(isChanged) {
@@ -244,14 +271,6 @@
     }
     var content = document.querySelector(".md-content__inner");
     if (content) content.insertBefore(banner, content.firstChild);
-  }
-
-  function renderLogoutButton() {
-    var btn = document.createElement("button");
-    btn.className = "glr-logout-btn";
-    btn.textContent = "Вийти";
-    btn.addEventListener("click", function () { OAuth.logout(); });
-    document.body.appendChild(btn);
   }
 
   // --- Thread UI ---
