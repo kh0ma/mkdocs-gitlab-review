@@ -126,6 +126,11 @@ class GitLabReviewPlugin(BasePlugin):
             f'<script>window.__GITLAB_REVIEW__={config_json};</script>'
         )
 
+        # CDN dependencies
+        parts.append(
+            '<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>'
+        )
+
         # CSS
         css_path = self._assets_dir / "review.css"
         if css_path.exists():

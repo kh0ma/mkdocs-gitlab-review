@@ -312,7 +312,7 @@
     if (cleaned && cleaned.charAt(0) === "<") {
       body.innerHTML = fixRelativeUrls(cleaned);
     } else {
-      body.innerHTML = fixRelativeUrls(renderMarkdown(cleaned));
+      body.innerHTML = renderMd(cleaned);
     }
     noteEl.appendChild(body);
 
@@ -335,29 +335,60 @@
     return div;
   }
 
-  // --- WYSIWYG Editor ---
+  // --- Markdown rendering (using marked.js from CDN) ---
+
+  function renderMd(text) {
+    if (!text) return "";
+    if (typeof marked !== "undefined") {
+      marked.setOptions({ breaks: true, gfm: true });
+      return fixRelativeUrls(marked.parse(text));
+    }
+    // Fallback: show as plain text with line breaks
+    return "<p>" + text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>") + "</p>";
+  }
+
+  // --- Editor ---
 
   function createEditor(placeholder) {
     var wrapper = document.createElement("div");
     wrapper.className = "glr-editor";
+
+    // Tabs: Write / Preview
+    var tabs = document.createElement("div");
+    tabs.className = "glr-editor__tabs";
+
+    var writeTab = document.createElement("button");
+    writeTab.className = "glr-editor__tab glr-editor__tab--active";
+    writeTab.textContent = "Написати";
+    writeTab.type = "button";
+
+    var previewTab = document.createElement("button");
+    previewTab.className = "glr-editor__tab";
+    previewTab.textContent = "Перегляд";
+    previewTab.type = "button";
+
+    tabs.appendChild(writeTab);
+    tabs.appendChild(previewTab);
+    wrapper.appendChild(tabs);
 
     // Toolbar
     var toolbar = document.createElement("div");
     toolbar.className = "glr-editor__toolbar";
 
     var buttons = [
-      { cmd: "bold", icon: "<b>B</b>", title: "Bold (Ctrl+B)" },
-      { cmd: "italic", icon: "<i>I</i>", title: "Italic (Ctrl+I)" },
-      { cmd: "strikeThrough", icon: "<s>S</s>", title: "Strikethrough" },
+      { cmd: "bold", icon: "<b>B</b>", title: "Bold (Ctrl+B)", md: "**", mdWrap: true },
+      { cmd: "italic", icon: "<i>I</i>", title: "Italic (Ctrl+I)", md: "_", mdWrap: true },
+      { cmd: "strikeThrough", icon: "<s>S</s>", title: "Strikethrough", md: "~~", mdWrap: true },
       { sep: true },
-      { cmd: "formatBlock", icon: "H", title: "Heading", value: "h3" },
-      { cmd: "insertUnorderedList", icon: "&#8226;", title: "Bullet list" },
-      { cmd: "insertOrderedList", icon: "1.", title: "Numbered list" },
+      { prefix: "### ", icon: "H", title: "Heading" },
+      { prefix: "- ", icon: "\u2022", title: "Bullet list" },
+      { prefix: "1. ", icon: "1.", title: "Numbered list" },
       { sep: true },
-      { cmd: "formatBlock", icon: "&#10077;", title: "Quote", value: "blockquote" },
-      { custom: "code", icon: "&lt;/&gt;", title: "Inline code" },
-      { cmd: "createLink", icon: "&#128279;", title: "Link", prompt: true },
-      { cmd: "insertHorizontalRule", icon: "&#8213;", title: "Horizontal rule" },
+      { prefix: "> ", icon: "\u275D", title: "Quote" },
+      { md: "`", mdWrap: true, icon: "&lt;/&gt;", title: "Inline code" },
+      { custom: "link", icon: "\uD83D\uDD17", title: "Link" },
+      { custom: "image", icon: "\uD83D\uDDBC", title: "Image" },
+      { insert: "\n---\n", icon: "\u2015", title: "Horizontal rule" },
     ];
 
     buttons.forEach(function (b) {
@@ -372,96 +403,138 @@
       btn.innerHTML = b.icon;
       btn.title = b.title;
       btn.type = "button";
-      btn.addEventListener("mousedown", function (e) {
+      btn.addEventListener("click", function (e) {
         e.preventDefault();
-        if (b.custom === "code") {
-          // Wrap selection in <code>
-          var sel = window.getSelection();
-          if (sel.rangeCount) {
-            var range = sel.getRangeAt(0);
-            var code = document.createElement("code");
-            range.surroundContents(code);
-          }
-        } else if (b.prompt) {
-          var url = prompt("URL:");
-          if (url) document.execCommand(b.cmd, false, url);
-        } else if (b.value) {
-          document.execCommand(b.cmd, false, b.value);
-        } else {
-          document.execCommand(b.cmd, false, null);
-        }
+        editorAction(textarea, b);
       });
       toolbar.appendChild(btn);
     });
 
     wrapper.appendChild(toolbar);
 
-    // Editable area
-    var editable = document.createElement("div");
-    editable.className = "glr-editor__content";
-    editable.contentEditable = "true";
-    editable.setAttribute("data-placeholder", placeholder || "Написати коментар...");
+    // Textarea (markdown source)
+    var textarea = document.createElement("textarea");
+    textarea.className = "glr-editor__textarea";
+    textarea.placeholder = placeholder || "Написати коментар...";
+    textarea.rows = 4;
 
     // Image paste
-    editable.addEventListener("paste", function (e) {
+    textarea.addEventListener("paste", function (e) {
       var items = (e.clipboardData || {}).items;
       if (!items) return;
-
       for (var i = 0; i < items.length; i++) {
         if (items[i].type.indexOf("image/") === 0) {
           e.preventDefault();
           var file = items[i].getAsFile();
-          uploadImage(file).then(function (url) {
-            if (url) {
-              var img = document.createElement("img");
-              img.src = url;
-              img.style.maxWidth = "100%";
-              document.execCommand("insertHTML", false, img.outerHTML);
-            }
-          });
+          handleImageUpload(textarea, file);
           return;
         }
       }
     });
 
     // Drag & drop images
-    editable.addEventListener("drop", function (e) {
+    textarea.addEventListener("drop", function (e) {
       var files = e.dataTransfer && e.dataTransfer.files;
-      if (!files || files.length === 0) return;
-
+      if (!files) return;
       for (var i = 0; i < files.length; i++) {
         if (files[i].type.indexOf("image/") === 0) {
           e.preventDefault();
-          (function (f) {
-            uploadImage(f).then(function (url) {
-              if (url) {
-                editable.focus();
-                document.execCommand("insertHTML", false,
-                  '<img src="' + url + '" style="max-width:100%">');
-              }
-            });
-          })(files[i]);
+          handleImageUpload(textarea, files[i]);
           return;
         }
       }
     });
+    textarea.addEventListener("dragover", function (e) { e.preventDefault(); });
 
-    editable.addEventListener("dragover", function (e) { e.preventDefault(); });
+    wrapper.appendChild(textarea);
 
-    wrapper.appendChild(editable);
+    // Preview pane
+    var preview = document.createElement("div");
+    preview.className = "glr-editor__preview";
+    preview.style.display = "none";
+    wrapper.appendChild(preview);
+
+    // Tab switching
+    writeTab.addEventListener("click", function () {
+      writeTab.classList.add("glr-editor__tab--active");
+      previewTab.classList.remove("glr-editor__tab--active");
+      textarea.style.display = "";
+      toolbar.style.display = "";
+      preview.style.display = "none";
+    });
+
+    previewTab.addEventListener("click", function () {
+      previewTab.classList.add("glr-editor__tab--active");
+      writeTab.classList.remove("glr-editor__tab--active");
+      textarea.style.display = "none";
+      toolbar.style.display = "none";
+      preview.innerHTML = renderMd(textarea.value) || '<p style="color:#999">Нічого для перегляду</p>';
+      preview.style.display = "";
+    });
 
     return {
       el: wrapper,
-      getMarkdown: function () {
-        return htmlToMarkdown(editable.innerHTML);
-      },
-      clear: function () {
-        editable.innerHTML = "";
-      },
-      focus: function () {
-        editable.focus();
-      },
+      getMarkdown: function () { return textarea.value.trim(); },
+      clear: function () { textarea.value = ""; },
+      focus: function () { textarea.focus(); },
     };
+  }
+
+  function editorAction(textarea, b) {
+    var start = textarea.selectionStart;
+    var end = textarea.selectionEnd;
+    var text = textarea.value;
+    var selected = text.substring(start, end);
+
+    if (b.mdWrap && b.md) {
+      var wrapped = b.md + (selected || "text") + b.md;
+      textarea.value = text.substring(0, start) + wrapped + text.substring(end);
+      textarea.selectionStart = start + b.md.length;
+      textarea.selectionEnd = start + wrapped.length - b.md.length;
+    } else if (b.prefix) {
+      // Find start of line
+      var lineStart = text.lastIndexOf("\n", start - 1) + 1;
+      textarea.value = text.substring(0, lineStart) + b.prefix + text.substring(lineStart);
+      textarea.selectionStart = start + b.prefix.length;
+      textarea.selectionEnd = end + b.prefix.length;
+    } else if (b.insert) {
+      textarea.value = text.substring(0, end) + b.insert + text.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = end + b.insert.length;
+    } else if (b.custom === "link") {
+      var url = prompt("URL:");
+      if (url) {
+        var linkText = selected || "link";
+        var md = "[" + linkText + "](" + url + ")";
+        textarea.value = text.substring(0, start) + md + text.substring(end);
+      }
+    } else if (b.custom === "image") {
+      // Open file picker
+      var input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.addEventListener("change", function () {
+        if (input.files && input.files[0]) {
+          handleImageUpload(textarea, input.files[0]);
+        }
+      });
+      input.click();
+    }
+    textarea.focus();
+  }
+
+  function handleImageUpload(textarea, file) {
+    var start = textarea.selectionStart;
+    var placeholder = "![Uploading...]()";
+    textarea.value = textarea.value.substring(0, start) + placeholder + textarea.value.substring(start);
+    textarea.selectionStart = textarea.selectionEnd = start + placeholder.length;
+
+    uploadImage(file).then(function (url) {
+      if (url) {
+        textarea.value = textarea.value.replace(placeholder, "![](" + url + ")");
+      } else {
+        textarea.value = textarea.value.replace(placeholder, "![Upload failed]()");
+      }
+    });
   }
 
   function uploadImage(file) {
@@ -482,8 +555,6 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (data && data.url) {
-          // GitLab returns URL relative to project (e.g. /uploads/hash/image.png)
-          // Build full URL using project_url
           if (data.url.startsWith("http")) return data.url;
           var base = config.project_url || config.gitlab_url;
           return base.replace(/\/$/, "") + data.url;
@@ -494,50 +565,6 @@
         return null;
       })
       .catch(function () { return null; });
-  }
-
-  function htmlToMarkdown(html) {
-    if (!html) return "";
-    return html
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/p>\s*<p>/gi, "\n\n")
-      .replace(/<p>/gi, "")
-      .replace(/<\/p>/gi, "")
-      // Headings
-      .replace(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi, function (_, level, text) {
-        return "#".repeat(parseInt(level)) + " " + text + "\n\n";
-      })
-      // Bold
-      .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
-      .replace(/<b>(.*?)<\/b>/gi, "**$1**")
-      // Italic
-      .replace(/<em>(.*?)<\/em>/gi, "*$1*")
-      .replace(/<i>((?:(?!<\/?i>).)*)<\/i>/gi, "*$1*")
-      // Strikethrough
-      .replace(/<del>(.*?)<\/del>/gi, "~~$1~~")
-      .replace(/<s>(.*?)<\/s>/gi, "~~$1~~")
-      .replace(/<strike>(.*?)<\/strike>/gi, "~~$1~~")
-      // Code
-      .replace(/<code>(.*?)<\/code>/gi, "`$1`")
-      // Blockquote
-      .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, function (_, text) {
-        return text.trim().split("\n").map(function (l) { return "> " + l; }).join("\n") + "\n\n";
-      })
-      // Links and images
-      .replace(/<a href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
-      .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, "![]($1)")
-      // Lists
-      .replace(/<li>(.*?)<\/li>/gi, "- $1\n")
-      .replace(/<\/?[uo]l>/gi, "")
-      // Horizontal rule
-      .replace(/<hr\s*\/?>/gi, "\n---\n")
-      // Cleanup
-      .replace(/<[^>]+>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .trim();
   }
 
   // --- Forms ---
