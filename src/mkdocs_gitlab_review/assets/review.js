@@ -520,13 +520,16 @@
     )
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
+        if (data && data.full_path) {
+          // full_path is the most reliable — includes project path
+          return config.gitlab_url + data.full_path;
+        }
         if (data && data.url) {
           if (data.url.startsWith("http")) return data.url;
+          // GitLab upload URLs need /-/ prefix in project context
           var base = config.project_url || config.gitlab_url;
-          return base.replace(/\/$/, "") + data.url;
-        }
-        if (data && data.full_path) {
-          return config.gitlab_url + data.full_path;
+          var uploadPath = data.url; // e.g. /uploads/hash/image.png
+          return base.replace(/\/$/, "") + "/-" + uploadPath;
         }
         return null;
       })
@@ -717,6 +720,7 @@
   }
 
   function loadAuthImages(container) {
+    // Fix image URLs to point to GitLab project with /-/ prefix
     var imgs = container.querySelectorAll("img");
     var projectBase = (config.project_url || config.gitlab_url).replace(/\/$/, "");
 
@@ -724,55 +728,24 @@
       var src = img.getAttribute("src") || "";
       if (src.indexOf("/uploads/") === -1) return;
 
-      // Extract /uploads/... path
       var uploadsIdx = src.indexOf("/uploads/");
       var uploadPath = src.substring(uploadsIdx);
 
-      // Use project web URL (GitLab redirects to S3 signed URL)
-      var webUrl = projectBase + uploadPath;
-
-      img.setAttribute("data-original-src", src);
-      img.src = "";
-      img.alt = "Завантаження...";
-      img.style.minHeight = "2rem";
-      img.style.background = "var(--md-default-fg-color--lightest, #f0f0f0)";
-
-      var token = OAuth.getToken();
-      if (!token) return;
-
-      // Fetch via project web URL with Bearer token
-      fetch(webUrl, {
-        headers: { "Authorization": "Bearer " + token },
-        redirect: "follow",
-      })
-        .then(function (r) { return r.ok ? r.blob() : null; })
-        .then(function (blob) {
-          if (blob) {
-            img.src = URL.createObjectURL(blob);
-            img.alt = "";
-            img.style.minHeight = "";
-            img.style.background = "";
-          } else {
-            img.alt = "Зображення недоступне";
-            img.style.minHeight = "";
-            img.style.background = "";
-          }
-        })
-        .catch(function () {
-          img.alt = "Зображення недоступне";
-          img.style.minHeight = "";
-          img.style.background = "";
-        });
+      // Ensure /-/ prefix before /uploads/
+      if (src.indexOf("/-/uploads/") === -1) {
+        img.src = projectBase + "/-" + uploadPath;
+      } else if (!src.startsWith("http")) {
+        img.src = projectBase + uploadPath;
+      }
     });
   }
 
   function fixRelativeUrls(html) {
-    // Fix relative /uploads/ URLs in GitLab-rendered HTML to point to project
     if (!html) return html;
     var base = (config.project_url || config.gitlab_url).replace(/\/$/, "");
     return html
-      .replace(/src="\/uploads\//g, 'src="' + base + '/uploads/')
-      .replace(/href="\/uploads\//g, 'href="' + base + '/uploads/');
+      .replace(/src="\/uploads\//g, 'src="' + base + '/-/uploads/')
+      .replace(/href="\/uploads\//g, 'href="' + base + '/-/uploads/');
   }
 
   function stripFilePrefix(text) {
