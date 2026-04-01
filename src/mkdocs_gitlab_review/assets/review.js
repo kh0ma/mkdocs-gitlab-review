@@ -472,11 +472,17 @@
   // --- Helpers ---
 
   function stripFilePrefix(html) {
-    // Remove **file.md:123**\n\n or <strong>file.md:123</strong> prefix from note body
     if (!html) return html;
+    // GitLab renders markdown to HTML. The prefix **file:N** or `file:N`
+    // may appear as its own <p> or inline within the first <p>.
+    // Remove all variations:
     return html
-      .replace(/^<p><strong>[^<]+:\d+<\/strong><\/p>\n*/, "")
-      .replace(/^<p><code>[^<]+:\d+<\/code><\/p>\n*/, "");
+      // Separate paragraph: <p><strong>file:N</strong></p>
+      .replace(/^<p><strong>[^<]+?:\d+<\/strong><\/p>\s*/i, "")
+      .replace(/^<p><code>[^<]+?:\d+<\/code><\/p>\s*/i, "")
+      // Inline at start of paragraph: <p><strong>file:N</strong><br>\n...
+      .replace(/^(<p>)<strong>[^<]+?:\d+<\/strong>\s*(?:<br\s*\/?>)?\s*/i, "$1")
+      .replace(/^(<p>)<code>[^<]+?:\d+<\/code>\s*(?:<br\s*\/?>)?\s*/i, "$1");
   }
 
   function findDiscussionsForLine(file, line) {
