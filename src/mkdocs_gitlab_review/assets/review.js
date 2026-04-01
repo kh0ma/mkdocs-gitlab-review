@@ -476,7 +476,7 @@
           var displayUrl = url;
           if (url.startsWith("/uploads/")) {
             var base = (config.project_url || config.gitlab_url).replace(/\/$/, "");
-            displayUrl = base + "/-" + url;
+            displayUrl = base + url;
           }
           quill.insertEmbed(range.index, "image", displayUrl);
           var imgEl = quill.root.querySelector('img[src="' + displayUrl + '"]');
@@ -757,7 +757,7 @@
 
       // Ensure /-/ prefix before /uploads/
       if (src.indexOf("/-/uploads/") === -1) {
-        img.src = projectBase + "/-" + uploadPath;
+        img.src = projectBase + uploadPath;
       } else if (!src.startsWith("http")) {
         img.src = projectBase + uploadPath;
       }
@@ -768,8 +768,8 @@
     if (!html) return html;
     var base = (config.project_url || config.gitlab_url).replace(/\/$/, "");
     return html
-      .replace(/src="\/uploads\//g, 'src="' + base + '/-/uploads/')
-      .replace(/href="\/uploads\//g, 'href="' + base + '/-/uploads/');
+      .replace(/src="\/uploads\//g, 'src="' + base + '/uploads/')
+      .replace(/href="\/uploads\//g, 'href="' + base + '/uploads/');
   }
 
   function stripFilePrefix(text) {
