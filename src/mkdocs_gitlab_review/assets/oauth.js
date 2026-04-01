@@ -152,6 +152,11 @@ window.GitLabOAuth = (function () {
         clearToken();
         return Promise.reject(new Error("Token expired"));
       }
+      if (!r.ok) {
+        return r.json().then(function (data) {
+          return Promise.reject(data);
+        });
+      }
       return r.json();
     });
   }

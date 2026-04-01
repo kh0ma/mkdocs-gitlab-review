@@ -152,15 +152,6 @@
     return { new_lines: newLines, lineMap: lineMap };
   }
 
-  function sha1Hex(str) {
-    var encoder = new TextEncoder();
-    return crypto.subtle.digest("SHA-1", encoder.encode(str)).then(function (buf) {
-      return Array.from(new Uint8Array(buf)).map(function (b) {
-        return b.toString(16).padStart(2, "0");
-      }).join("");
-    });
-  }
-
   // --- Rendering ---
 
   function renderLoginButton() {
@@ -423,23 +414,15 @@
     var fileInfo = state.changedFiles[file];
 
     if (!state.diffRefs || !fileInfo) {
-      // No diff info — post as general discussion
-      var prefix = "`" + file + ":" + line + "`\n\n";
-      return OAuth.apiFetch(
-        "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
-        { method: "POST", body: JSON.stringify({ body: prefix + body }) }
-      );
+      return postGeneralComment(file, line, body);
     }
 
     // Resolve old_line/new_line from diff line mapping
     var mapping = fileInfo.lineMap[line];
-    var oldL = mapping ? mapping.old_line : null;
-    var newL = mapping ? mapping.new_line : line;
 
-    // For lines not in any diff hunk, approximate: use same number for both
     if (!mapping) {
-      oldL = line;
-      newL = line;
+      // Line not in any diff hunk — general discussion
+      return postGeneralComment(file, line, body);
     }
 
     var position = {
@@ -451,30 +434,29 @@
       new_path: fileInfo.new_path,
     };
 
-    if (fileInfo.new_file || (mapping && mapping.type === "added")) {
-      position.new_line = newL;
+    if (fileInfo.new_file || mapping.type === "added") {
+      position.new_line = mapping.new_line;
     } else {
-      if (oldL !== null) position.old_line = oldL;
-      position.new_line = newL;
+      if (mapping.old_line !== null) position.old_line = mapping.old_line;
+      position.new_line = mapping.new_line;
     }
 
-    // Compute line_code = sha1(file_path)_oldline_newline
-    return sha1Hex(fileInfo.new_path).then(function (hash) {
-      var oldStr = oldL !== null ? String(oldL) : "0";
-      var newStr = String(newL);
-      var lineCode = hash + "_" + oldStr + "_" + newStr;
-
-      var payload = {
-        body: body,
-        position: position,
-        line_code: lineCode,
-      };
-
-      return OAuth.apiFetch(
-        "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
-        { method: "POST", body: JSON.stringify(payload) }
-      );
+    // Try inline comment, fallback to general on error
+    return OAuth.apiFetch(
+      "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
+      { method: "POST", body: JSON.stringify({ body: body, position: position }) }
+    ).catch(function () {
+      // Inline failed (line outside diff context) — fallback
+      return postGeneralComment(file, line, body);
     });
+  }
+
+  function postGeneralComment(file, line, body) {
+    var prefix = "**" + file + ":" + line + "**\n\n";
+    return OAuth.apiFetch(
+      "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
+      { method: "POST", body: JSON.stringify({ body: prefix + body }) }
+    );
   }
 
   function postReply(discussionId, body) {
