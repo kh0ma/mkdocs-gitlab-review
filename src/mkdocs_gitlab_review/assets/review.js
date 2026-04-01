@@ -261,49 +261,52 @@
     block.insertAdjacentElement("afterend", container);
   }
 
+  function renderNote(note) {
+    var noteEl = document.createElement("div");
+    noteEl.className = "glr-note";
+
+    var header = document.createElement("div");
+    header.className = "glr-note__header";
+
+    if (note.author && note.author.avatar_url) {
+      var avatar = document.createElement("img");
+      avatar.className = "glr-note__avatar";
+      avatar.src = note.author.avatar_url;
+      avatar.width = 20;
+      avatar.height = 20;
+      header.appendChild(avatar);
+    }
+
+    var authorSpan = document.createElement("strong");
+    authorSpan.textContent = note.author ? note.author.name : "Unknown";
+    header.appendChild(authorSpan);
+
+    var time = document.createElement("span");
+    time.className = "glr-note__time";
+    time.textContent = formatTime(note.created_at);
+    header.appendChild(time);
+
+    noteEl.appendChild(header);
+
+    var body = document.createElement("div");
+    body.className = "glr-note__body";
+    body.innerHTML = note.body;
+    noteEl.appendChild(body);
+
+    return noteEl;
+  }
+
   function renderThread(discussion) {
     var div = document.createElement("div");
     div.className = "glr-thread";
 
     (discussion.notes || []).forEach(function (note) {
-      if (note.system) return; // skip system notes
-
-      var noteEl = document.createElement("div");
-      noteEl.className = "glr-note";
-
-      var header = document.createElement("div");
-      header.className = "glr-note__header";
-
-      if (note.author && note.author.avatar_url) {
-        var avatar = document.createElement("img");
-        avatar.className = "glr-note__avatar";
-        avatar.src = note.author.avatar_url;
-        avatar.width = 20;
-        avatar.height = 20;
-        header.appendChild(avatar);
-      }
-
-      var authorSpan = document.createElement("strong");
-      authorSpan.textContent = note.author ? note.author.name : "Unknown";
-      header.appendChild(authorSpan);
-
-      var time = document.createElement("span");
-      time.className = "glr-note__time";
-      time.textContent = formatTime(note.created_at);
-      header.appendChild(time);
-
-      noteEl.appendChild(header);
-
-      var body = document.createElement("div");
-      body.className = "glr-note__body";
-      body.innerHTML = note.body;
-      noteEl.appendChild(body);
-
-      div.appendChild(noteEl);
+      if (note.system) return;
+      div.appendChild(renderNote(note));
     });
 
     // Reply form
-    var replyForm = renderReplyForm(discussion.id);
+    var replyForm = renderReplyForm(discussion.id, div);
     div.appendChild(replyForm);
 
     return div;
@@ -345,7 +348,7 @@
     return form;
   }
 
-  function renderReplyForm(discussionId) {
+  function renderReplyForm(discussionId, threadDiv) {
     var form = document.createElement("div");
     form.className = "glr-form glr-form--reply";
 
@@ -372,10 +375,13 @@
       if (!body) return;
 
       btn.disabled = true;
-      postReply(discussionId, body).then(function () {
+      postReply(discussionId, body).then(function (note) {
         textarea.value = "";
         btn.disabled = false;
         inputArea.style.display = "none";
+        if (note && threadDiv) {
+          threadDiv.insertBefore(renderNote(note), form);
+        }
       }).catch(function () {
         btn.disabled = false;
       });
