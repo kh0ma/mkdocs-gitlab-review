@@ -771,32 +771,71 @@
   }
 
   function loadAuthImages(container, noteId) {
-    // GitLab uploads are only accessible via GitLab's internal rendering.
-    // Replace <img> with clickable placeholder linking to the specific note.
+    // Download upload images via GitLab Uploads API (supports CORS + Bearer token)
+    // GET /projects/:id/uploads/:secret/:filename
     var imgs = Array.from(container.querySelectorAll("img"));
+    var apiBase = config.gitlab_url + "/api/v4/projects/" + config.project_id;
 
     imgs.forEach(function (img) {
       var src = img.getAttribute("src") || "";
-      // Match /uploads/ in src or in resolved URL
-      var isUpload = src.indexOf("/uploads/") !== -1 ||
-        (img.src && img.src.indexOf("/uploads/") !== -1);
-      // Skip avatar images
+      // Skip avatars
       if (src.indexOf("avatar") !== -1) return;
-      if (!isUpload) return;
 
-      var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
-        "/-/merge_requests/" + state.mrIid;
-      if (noteId) noteUrl += "#note_" + noteId;
+      // Match /uploads/{secret}/{filename}
+      var match = src.match(/\/uploads\/([a-f0-9]{32})\/(.+)$/);
+      if (!match) {
+        // Also try resolved img.src
+        match = (img.src || "").match(/\/uploads\/([a-f0-9]{32})\/(.+)$/);
+      }
+      if (!match) return;
 
-      var link = document.createElement("a");
-      link.className = "glr-image-placeholder";
-      link.href = noteUrl;
-      link.target = "_blank";
-      link.rel = "noopener";
-      link.innerHTML = '<span class="glr-image-placeholder__icon">\uD83D\uDDBC</span>' +
-        '<span class="glr-image-placeholder__text">Зображення — відкрити в GitLab</span>';
-      img.replaceWith(link);
+      var secret = match[1];
+      var filename = match[2];
+      var apiUrl = apiBase + "/uploads/" + secret + "/" + filename;
+
+      img.setAttribute("data-original-src", src);
+      img.src = "";
+      img.alt = "Завантаження...";
+      img.style.maxWidth = "100%";
+
+      var token = OAuth.getToken();
+      if (!token) {
+        // No token — show placeholder
+        replaceWithPlaceholder(img, noteId);
+        return;
+      }
+
+      fetch(apiUrl, {
+        headers: { "Authorization": "Bearer " + token }
+      })
+        .then(function (r) { return r.ok ? r.blob() : null; })
+        .then(function (blob) {
+          if (blob) {
+            img.src = URL.createObjectURL(blob);
+            img.alt = "";
+          } else {
+            replaceWithPlaceholder(img, noteId);
+          }
+        })
+        .catch(function () {
+          replaceWithPlaceholder(img, noteId);
+        });
     });
+  }
+
+  function replaceWithPlaceholder(img, noteId) {
+    var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
+      "/-/merge_requests/" + state.mrIid;
+    if (noteId) noteUrl += "#note_" + noteId;
+
+    var link = document.createElement("a");
+    link.className = "glr-image-placeholder";
+    link.href = noteUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.innerHTML = '<span class="glr-image-placeholder__icon">\uD83D\uDDBC</span>' +
+      '<span class="glr-image-placeholder__text">Зображення — відкрити в GitLab</span>';
+    img.replaceWith(link);
   }
 
   function fixRelativeUrls(html) {
