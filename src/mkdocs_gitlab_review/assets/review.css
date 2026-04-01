@@ -105,6 +105,28 @@
   border-radius: 0.2rem;
 }
 
+.glr-note__body code {
+  background: var(--md-code-bg-color, #f0f0f0);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.15rem;
+  font-size: 0.8em;
+}
+
+.glr-note__body blockquote {
+  border-left: 3px solid var(--md-accent-fg-color, #536dfe);
+  margin: 0.3rem 0;
+  padding: 0.2rem 0.5rem;
+  color: var(--md-default-fg-color--light, #666);
+}
+
+.glr-note__body del {
+  text-decoration: line-through;
+}
+
+.glr-note__body a {
+  color: var(--md-accent-fg-color, #536dfe);
+}
+
 /* --- Comment form --- */
 
 .glr-form {
@@ -146,6 +168,12 @@
   background: var(--md-default-bg-color, #fff);
 }
 
+.glr-editor__sep {
+  width: 1px;
+  background: var(--md-default-fg-color--lightest, #ddd);
+  margin: 0.15rem 0.1rem;
+}
+
 .glr-editor__content {
   min-height: 3rem;
   max-height: 12rem;
@@ -167,6 +195,25 @@
 .glr-editor__content img {
   max-width: 100%;
   border-radius: 0.2rem;
+  margin: 0.3rem 0;
+}
+
+.glr-editor__content code {
+  background: var(--md-code-bg-color, #f0f0f0);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.15rem;
+  font-size: 0.8em;
+}
+
+.glr-editor__content blockquote {
+  border-left: 3px solid var(--md-accent-fg-color, #536dfe);
+  margin: 0.3rem 0;
+  padding: 0.2rem 0.5rem;
+  color: var(--md-default-fg-color--light, #666);
+}
+
+.glr-editor__content h3 {
+  font-size: 1rem;
   margin: 0.3rem 0;
 }
 

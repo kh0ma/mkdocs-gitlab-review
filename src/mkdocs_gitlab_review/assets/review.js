@@ -312,7 +312,7 @@
     if (cleaned && cleaned.charAt(0) === "<") {
       body.innerHTML = fixRelativeUrls(cleaned);
     } else {
-      body.textContent = cleaned;
+      body.innerHTML = fixRelativeUrls(renderMarkdown(cleaned));
     }
     noteEl.appendChild(body);
 
@@ -346,13 +346,27 @@
     toolbar.className = "glr-editor__toolbar";
 
     var buttons = [
-      { cmd: "bold", icon: "<b>B</b>", title: "Bold" },
-      { cmd: "italic", icon: "<i>I</i>", title: "Italic" },
-      { cmd: "insertUnorderedList", icon: "&#8226;", title: "List" },
+      { cmd: "bold", icon: "<b>B</b>", title: "Bold (Ctrl+B)" },
+      { cmd: "italic", icon: "<i>I</i>", title: "Italic (Ctrl+I)" },
+      { cmd: "strikeThrough", icon: "<s>S</s>", title: "Strikethrough" },
+      { sep: true },
+      { cmd: "formatBlock", icon: "H", title: "Heading", value: "h3" },
+      { cmd: "insertUnorderedList", icon: "&#8226;", title: "Bullet list" },
+      { cmd: "insertOrderedList", icon: "1.", title: "Numbered list" },
+      { sep: true },
+      { cmd: "formatBlock", icon: "&#10077;", title: "Quote", value: "blockquote" },
+      { custom: "code", icon: "&lt;/&gt;", title: "Inline code" },
       { cmd: "createLink", icon: "&#128279;", title: "Link", prompt: true },
+      { cmd: "insertHorizontalRule", icon: "&#8213;", title: "Horizontal rule" },
     ];
 
     buttons.forEach(function (b) {
+      if (b.sep) {
+        var sep = document.createElement("span");
+        sep.className = "glr-editor__sep";
+        toolbar.appendChild(sep);
+        return;
+      }
       var btn = document.createElement("button");
       btn.className = "glr-editor__btn";
       btn.innerHTML = b.icon;
@@ -360,9 +374,19 @@
       btn.type = "button";
       btn.addEventListener("mousedown", function (e) {
         e.preventDefault();
-        if (b.prompt) {
+        if (b.custom === "code") {
+          // Wrap selection in <code>
+          var sel = window.getSelection();
+          if (sel.rangeCount) {
+            var range = sel.getRangeAt(0);
+            var code = document.createElement("code");
+            range.surroundContents(code);
+          }
+        } else if (b.prompt) {
           var url = prompt("URL:");
           if (url) document.execCommand(b.cmd, false, url);
+        } else if (b.value) {
+          document.execCommand(b.cmd, false, b.value);
         } else {
           document.execCommand(b.cmd, false, null);
         }
@@ -473,21 +497,41 @@
   }
 
   function htmlToMarkdown(html) {
-    // Simple HTML → Markdown conversion for the editor output
     if (!html) return "";
     return html
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/p>\s*<p>/gi, "\n\n")
       .replace(/<p>/gi, "")
       .replace(/<\/p>/gi, "")
+      // Headings
+      .replace(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi, function (_, level, text) {
+        return "#".repeat(parseInt(level)) + " " + text + "\n\n";
+      })
+      // Bold
       .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
       .replace(/<b>(.*?)<\/b>/gi, "**$1**")
+      // Italic
       .replace(/<em>(.*?)<\/em>/gi, "*$1*")
       .replace(/<i>((?:(?!<\/?i>).)*)<\/i>/gi, "*$1*")
+      // Strikethrough
+      .replace(/<del>(.*?)<\/del>/gi, "~~$1~~")
+      .replace(/<s>(.*?)<\/s>/gi, "~~$1~~")
+      .replace(/<strike>(.*?)<\/strike>/gi, "~~$1~~")
+      // Code
+      .replace(/<code>(.*?)<\/code>/gi, "`$1`")
+      // Blockquote
+      .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, function (_, text) {
+        return text.trim().split("\n").map(function (l) { return "> " + l; }).join("\n") + "\n\n";
+      })
+      // Links and images
       .replace(/<a href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
       .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, "![]($1)")
+      // Lists
       .replace(/<li>(.*?)<\/li>/gi, "- $1\n")
       .replace(/<\/?[uo]l>/gi, "")
+      // Horizontal rule
+      .replace(/<hr\s*\/?>/gi, "\n---\n")
+      // Cleanup
       .replace(/<[^>]+>/g, "")
       .replace(/&nbsp;/g, " ")
       .replace(/&amp;/g, "&")
@@ -639,6 +683,45 @@
   }
 
   // --- Helpers ---
+
+  function renderMarkdown(md) {
+    if (!md) return "";
+    var html = md
+      // Escape HTML
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      // Images (before links)
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">')
+      // Links
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      // Bold
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/__(.+?)__/g, "<strong>$1</strong>")
+      // Italic
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/_(.+?)_/g, "<em>$1</em>")
+      // Strikethrough
+      .replace(/~~(.+?)~~/g, "<del>$1</del>")
+      // Inline code
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      // Headings
+      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+      .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+      // Blockquote
+      .replace(/^&gt; (.+)$/gm, "<blockquote>$1</blockquote>")
+      // Horizontal rule
+      .replace(/^---$/gm, "<hr>")
+      // List items
+      .replace(/^[-*] (.+)$/gm, "<li>$1</li>")
+      .replace(/^\d+\. (.+)$/gm, "<li>$1</li>")
+      // Paragraphs (double newline)
+      .replace(/\n\n/g, "</p><p>")
+      // Single newline → <br>
+      .replace(/\n/g, "<br>");
+    return "<p>" + html + "</p>";
+  }
 
   function fixRelativeUrls(html) {
     // Fix relative /uploads/ URLs in GitLab-rendered HTML to point to project
