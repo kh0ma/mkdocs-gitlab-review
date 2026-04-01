@@ -773,44 +773,52 @@
   }
 
   function loadAuthImages(container) {
-    // Find images pointing to GitLab uploads and load them with auth
     var imgs = container.querySelectorAll("img");
-    var projectBase = (config.project_url || config.gitlab_url).replace(/\/$/, "");
+    var apiBase = config.gitlab_url + "/api/v4/projects/" + config.project_id;
 
     imgs.forEach(function (img) {
       var src = img.getAttribute("src") || "";
-      // Match GitLab upload URLs (relative or absolute)
-      if (src.indexOf("/uploads/") !== -1) {
-        var fullUrl = src;
-        if (!src.startsWith("http")) {
-          fullUrl = projectBase + (src.startsWith("/") ? "" : "/") + src;
-        }
-        img.setAttribute("data-original-src", src);
-        img.src = ""; // clear to prevent 404
-        img.alt = "Завантаження...";
-        img.style.minHeight = "2rem";
-        img.style.background = "var(--md-default-fg-color--lightest, #f0f0f0)";
+      if (src.indexOf("/uploads/") === -1) return;
 
-        var token = OAuth.getToken();
-        if (token) {
-          fetch(fullUrl, {
-            headers: { "Authorization": "Bearer " + token }
+      // Extract the /uploads/... part
+      var uploadsIdx = src.indexOf("/uploads/");
+      var uploadPath = src.substring(uploadsIdx); // /uploads/hash/image.png
+
+      // Build API URL: /api/v4/projects/:id/uploads/hash/image.png
+      var apiUrl = apiBase + uploadPath;
+
+      img.setAttribute("data-original-src", src);
+      img.src = "";
+      img.alt = "Завантаження...";
+      img.style.minHeight = "2rem";
+      img.style.background = "var(--md-default-fg-color--lightest, #f0f0f0)";
+
+      var token = OAuth.getToken();
+      if (token) {
+        fetch(apiUrl, {
+          headers: { "PRIVATE-TOKEN": token }
+        })
+          .then(function (r) {
+            if (r.ok) return r.blob();
+            // Fallback: try project web URL
+            return fetch(
+              (config.project_url || config.gitlab_url).replace(/\/$/, "") + uploadPath,
+              { headers: { "Authorization": "Bearer " + token } }
+            ).then(function (r2) { return r2.ok ? r2.blob() : null; });
           })
-            .then(function (r) { return r.ok ? r.blob() : null; })
-            .then(function (blob) {
-              if (blob) {
-                img.src = URL.createObjectURL(blob);
-                img.alt = "";
-                img.style.minHeight = "";
-                img.style.background = "";
-              } else {
-                img.alt = "Зображення недоступне";
-              }
-            })
-            .catch(function () {
+          .then(function (blob) {
+            if (blob) {
+              img.src = URL.createObjectURL(blob);
+              img.alt = "";
+              img.style.minHeight = "";
+              img.style.background = "";
+            } else {
               img.alt = "Зображення недоступне";
-            });
-        }
+            }
+          })
+          .catch(function () {
+            img.alt = "Зображення недоступне";
+          });
       }
     });
   }
