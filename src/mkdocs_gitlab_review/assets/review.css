@@ -8,6 +8,7 @@
 
 .glr-block--commentable {
   border-left: 2px solid transparent;
+  padding-right: 2rem;
   transition: border-color 0.15s;
 }
 
@@ -19,7 +20,7 @@
 .glr-add-btn {
   display: none;
   position: absolute;
-  right: -1.8rem;
+  right: 0;
   top: 0.15rem;
   width: 1.4rem;
   height: 1.4rem;
@@ -41,7 +42,7 @@
 /* Comment count badge */
 .glr-badge {
   position: absolute;
-  right: -1.8rem;
+  right: 0;
   top: 0.15rem;
   min-width: 1.2rem;
   height: 1.2rem;
@@ -57,9 +58,9 @@
   z-index: 2;
 }
 
-/* When badge is present, hide add-btn by default */
+/* When badge is present, shift add-btn left */
 .glr-block .glr-badge + .glr-add-btn {
-  right: -3.2rem;
+  right: 1.6rem;
 }
 
 /* --- Thread container --- */
