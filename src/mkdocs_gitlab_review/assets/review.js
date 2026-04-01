@@ -395,6 +395,22 @@
     setTimeout(function () {
       if (typeof Quill === "undefined") return;
 
+      // Allow blob: URLs in Quill sanitizer
+      var Link = Quill.import("formats/link");
+      var origSanitize = Link.sanitize;
+      Link.sanitize = function (url) {
+        if (url && url.startsWith("blob:")) return url;
+        return origSanitize.call(this, url);
+      };
+      var Image = Quill.import("formats/image");
+      if (Image && Image.sanitize) {
+        var origImgSanitize = Image.sanitize;
+        Image.sanitize = function (url) {
+          if (url && url.startsWith("blob:")) return url;
+          return origImgSanitize.call(this, url);
+        };
+      }
+
       quill = new Quill(editorContainer, {
         theme: "snow",
         placeholder: placeholder || "Написати коментар...",
@@ -754,11 +770,16 @@
   function loadAuthImages(container, noteId) {
     // GitLab uploads are only accessible via GitLab's internal rendering.
     // Replace <img> with clickable placeholder linking to the specific note.
-    var imgs = container.querySelectorAll("img");
+    var imgs = Array.from(container.querySelectorAll("img"));
 
     imgs.forEach(function (img) {
       var src = img.getAttribute("src") || "";
-      if (src.indexOf("/uploads/") === -1) return;
+      // Match /uploads/ in src or in resolved URL
+      var isUpload = src.indexOf("/uploads/") !== -1 ||
+        (img.src && img.src.indexOf("/uploads/") !== -1);
+      // Skip avatar images
+      if (src.indexOf("avatar") !== -1) return;
+      if (!isUpload) return;
 
       var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
         "/-/merge_requests/" + state.mrIid;
