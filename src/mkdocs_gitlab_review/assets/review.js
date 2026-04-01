@@ -335,28 +335,182 @@
     return div;
   }
 
+  // --- WYSIWYG Editor ---
+
+  function createEditor(placeholder) {
+    var wrapper = document.createElement("div");
+    wrapper.className = "glr-editor";
+
+    // Toolbar
+    var toolbar = document.createElement("div");
+    toolbar.className = "glr-editor__toolbar";
+
+    var buttons = [
+      { cmd: "bold", icon: "<b>B</b>", title: "Bold" },
+      { cmd: "italic", icon: "<i>I</i>", title: "Italic" },
+      { cmd: "insertUnorderedList", icon: "&#8226;", title: "List" },
+      { cmd: "createLink", icon: "&#128279;", title: "Link", prompt: true },
+    ];
+
+    buttons.forEach(function (b) {
+      var btn = document.createElement("button");
+      btn.className = "glr-editor__btn";
+      btn.innerHTML = b.icon;
+      btn.title = b.title;
+      btn.type = "button";
+      btn.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        if (b.prompt) {
+          var url = prompt("URL:");
+          if (url) document.execCommand(b.cmd, false, url);
+        } else {
+          document.execCommand(b.cmd, false, null);
+        }
+      });
+      toolbar.appendChild(btn);
+    });
+
+    wrapper.appendChild(toolbar);
+
+    // Editable area
+    var editable = document.createElement("div");
+    editable.className = "glr-editor__content";
+    editable.contentEditable = "true";
+    editable.setAttribute("data-placeholder", placeholder || "Написати коментар...");
+
+    // Image paste
+    editable.addEventListener("paste", function (e) {
+      var items = (e.clipboardData || {}).items;
+      if (!items) return;
+
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image/") === 0) {
+          e.preventDefault();
+          var file = items[i].getAsFile();
+          uploadImage(file).then(function (url) {
+            if (url) {
+              var img = document.createElement("img");
+              img.src = url;
+              img.style.maxWidth = "100%";
+              document.execCommand("insertHTML", false, img.outerHTML);
+            }
+          });
+          return;
+        }
+      }
+    });
+
+    // Drag & drop images
+    editable.addEventListener("drop", function (e) {
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (!files || files.length === 0) return;
+
+      for (var i = 0; i < files.length; i++) {
+        if (files[i].type.indexOf("image/") === 0) {
+          e.preventDefault();
+          (function (f) {
+            uploadImage(f).then(function (url) {
+              if (url) {
+                editable.focus();
+                document.execCommand("insertHTML", false,
+                  '<img src="' + url + '" style="max-width:100%">');
+              }
+            });
+          })(files[i]);
+          return;
+        }
+      }
+    });
+
+    editable.addEventListener("dragover", function (e) { e.preventDefault(); });
+
+    wrapper.appendChild(editable);
+
+    return {
+      el: wrapper,
+      getMarkdown: function () {
+        return htmlToMarkdown(editable.innerHTML);
+      },
+      clear: function () {
+        editable.innerHTML = "";
+      },
+      focus: function () {
+        editable.focus();
+      },
+    };
+  }
+
+  function uploadImage(file) {
+    var formData = new FormData();
+    formData.append("file", file);
+
+    var token = OAuth.getToken();
+    if (!token) return Promise.resolve(null);
+
+    return fetch(
+      config.gitlab_url + "/api/v4/projects/" + config.project_id + "/uploads",
+      {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token },
+        body: formData,
+      }
+    )
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && data.url) {
+          // GitLab returns relative URL, make absolute
+          return data.url.startsWith("http") ? data.url : config.gitlab_url + data.url;
+        }
+        return data && data.full_path ? config.gitlab_url + data.full_path : null;
+      })
+      .catch(function () { return null; });
+  }
+
+  function htmlToMarkdown(html) {
+    // Simple HTML → Markdown conversion for the editor output
+    if (!html) return "";
+    return html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>\s*<p>/gi, "\n\n")
+      .replace(/<p>/gi, "")
+      .replace(/<\/p>/gi, "")
+      .replace(/<strong>(.*?)<\/strong>/gi, "**$1**")
+      .replace(/<b>(.*?)<\/b>/gi, "**$1**")
+      .replace(/<em>(.*?)<\/em>/gi, "*$1*")
+      .replace(/<i>((?:(?!<\/?i>).)*)<\/i>/gi, "*$1*")
+      .replace(/<a href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)")
+      .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, "![]($1)")
+      .replace(/<li>(.*?)<\/li>/gi, "- $1\n")
+      .replace(/<\/?[uo]l>/gi, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .trim();
+  }
+
+  // --- Forms ---
+
   function renderCommentForm(file, line, onSuccess) {
     var form = document.createElement("div");
     form.className = "glr-form";
 
-    var textarea = document.createElement("textarea");
-    textarea.className = "glr-form__input";
-    textarea.placeholder = "Написати коментар...";
-    textarea.rows = 3;
+    var editor = createEditor("Написати коментар...");
 
     var btn = document.createElement("button");
     btn.className = "glr-form__submit";
     btn.textContent = "Відправити";
 
     btn.addEventListener("click", function () {
-      var body = textarea.value.trim();
+      var body = editor.getMarkdown();
       if (!body) return;
 
       btn.disabled = true;
       btn.textContent = "...";
 
       postComment(file, line, body).then(function (discussion) {
-        textarea.value = "";
+        editor.clear();
         btn.disabled = false;
         btn.textContent = "Відправити";
         if (onSuccess) onSuccess(discussion);
@@ -366,7 +520,7 @@
       });
     });
 
-    form.appendChild(textarea);
+    form.appendChild(editor.el);
     form.appendChild(btn);
     return form;
   }
@@ -384,22 +538,19 @@
     inputArea.className = "glr-form__area";
     inputArea.style.display = "none";
 
-    var textarea = document.createElement("textarea");
-    textarea.className = "glr-form__input";
-    textarea.placeholder = "Відповідь...";
-    textarea.rows = 2;
+    var editor = createEditor("Відповідь...");
 
     var btn = document.createElement("button");
     btn.className = "glr-form__submit";
     btn.textContent = "Відправити";
 
     btn.addEventListener("click", function () {
-      var body = textarea.value.trim();
+      var body = editor.getMarkdown();
       if (!body) return;
 
       btn.disabled = true;
       postReply(discussionId, body).then(function (note) {
-        textarea.value = "";
+        editor.clear();
         btn.disabled = false;
         inputArea.style.display = "none";
         if (note && threadDiv) {
@@ -410,13 +561,13 @@
       });
     });
 
-    inputArea.appendChild(textarea);
+    inputArea.appendChild(editor.el);
     inputArea.appendChild(btn);
     form.appendChild(inputArea);
 
     toggle.addEventListener("click", function () {
       inputArea.style.display = inputArea.style.display === "none" ? "block" : "none";
-      if (inputArea.style.display === "block") textarea.focus();
+      if (inputArea.style.display === "block") editor.focus();
     });
 
     return form;
