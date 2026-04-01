@@ -334,8 +334,8 @@
     } else {
       body.innerHTML = renderMd(cleaned);
     }
-    // Load authenticated images
-    loadAuthImages(body);
+    // Replace upload images with placeholder linking to this note in GitLab
+    loadAuthImages(body, note.id);
     noteEl.appendChild(body);
 
     return noteEl;
@@ -741,19 +741,22 @@
     return "<p>" + html + "</p>";
   }
 
-  function loadAuthImages(container) {
+  function loadAuthImages(container, noteId) {
     // GitLab uploads are only accessible via GitLab's internal rendering.
-    // Replace <img> with clickable placeholder linking to GitLab MR.
+    // Replace <img> with clickable placeholder linking to the specific note.
     var imgs = container.querySelectorAll("img");
 
     imgs.forEach(function (img) {
       var src = img.getAttribute("src") || "";
       if (src.indexOf("/uploads/") === -1) return;
 
+      var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
+        "/-/merge_requests/" + state.mrIid;
+      if (noteId) noteUrl += "#note_" + noteId;
+
       var link = document.createElement("a");
       link.className = "glr-image-placeholder";
-      link.href = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
-        "/-/merge_requests/" + state.mrIid;
+      link.href = noteUrl;
       link.target = "_blank";
       link.rel = "noopener";
       link.innerHTML = '<span class="glr-image-placeholder__icon">\uD83D\uDDBC</span>' +
@@ -765,8 +768,8 @@
   function fixRelativeUrls(html) {
     if (!html) return html;
     var base = (config.project_url || config.gitlab_url).replace(/\/$/, "");
+    // Fix relative links (not images — those are handled by loadAuthImages)
     return html
-      .replace(/src="\/uploads\//g, 'src="' + base + '/uploads/')
       .replace(/href="\/uploads\//g, 'href="' + base + '/uploads/');
   }
 
