@@ -148,11 +148,21 @@
   }
 
   function fetchDiscussions() {
-    return OAuth.apiFetch(
-      "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions?per_page=100"
-    ).then(function (discussions) {
-      state.discussions = discussions || [];
-    }).catch(function () {});
+    var basePath = "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions";
+    state.discussions = [];
+
+    function fetchPage(page) {
+      return OAuth.apiFetch(basePath + "?per_page=100&page=" + page)
+        .then(function (discussions) {
+          if (!discussions || !discussions.length) return;
+          state.discussions = state.discussions.concat(discussions);
+          if (discussions.length === 100) {
+            return fetchPage(page + 1);
+          }
+        });
+    }
+
+    return fetchPage(1).catch(function () {});
   }
 
   // --- Diff parsing ---
