@@ -9,7 +9,7 @@ from pathlib import Path
 from mkdocs.config import config_options
 from mkdocs.plugins import BasePlugin
 
-from .source_map import annotate_html, build_line_map
+from .source_map import annotate_html, build_block_lines
 
 log = logging.getLogger("mkdocs.plugins.gitlab_review")
 
@@ -60,7 +60,7 @@ class GitLabReviewPlugin(BasePlugin):
             return markdown
 
         src_path = page.file.src_path
-        self._line_maps[src_path] = build_line_map(markdown)
+        self._line_maps[src_path] = build_block_lines(markdown)
         return markdown
 
     def on_page_content(self, html, /, *, page, config, files):
