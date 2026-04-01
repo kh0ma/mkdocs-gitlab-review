@@ -328,9 +328,16 @@
     authorSpan.textContent = note.author ? note.author.name : "Unknown";
     header.appendChild(authorSpan);
 
-    var time = document.createElement("span");
+    var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
+      "/-/merge_requests/" + state.mrIid + "#note_" + note.id;
+
+    var time = document.createElement("a");
     time.className = "glr-note__time";
     time.textContent = formatTime(note.created_at);
+    time.href = noteUrl;
+    time.target = "_blank";
+    time.rel = "noopener";
+    time.title = "Відкрити в GitLab";
     header.appendChild(time);
 
     noteEl.appendChild(header);
