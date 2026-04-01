@@ -777,18 +777,18 @@
 
   function loadAuthImages(container) {
     var imgs = container.querySelectorAll("img");
-    var apiBase = config.gitlab_url + "/api/v4/projects/" + config.project_id;
+    var projectBase = (config.project_url || config.gitlab_url).replace(/\/$/, "");
 
     imgs.forEach(function (img) {
       var src = img.getAttribute("src") || "";
       if (src.indexOf("/uploads/") === -1) return;
 
-      // Extract the /uploads/... part
+      // Extract /uploads/... path
       var uploadsIdx = src.indexOf("/uploads/");
-      var uploadPath = src.substring(uploadsIdx); // /uploads/hash/image.png
+      var uploadPath = src.substring(uploadsIdx);
 
-      // Build API URL: /api/v4/projects/:id/uploads/hash/image.png
-      var apiUrl = apiBase + uploadPath;
+      // Use project web URL (GitLab redirects to S3 signed URL)
+      var webUrl = projectBase + uploadPath;
 
       img.setAttribute("data-original-src", src);
       img.src = "";
@@ -797,32 +797,31 @@
       img.style.background = "var(--md-default-fg-color--lightest, #f0f0f0)";
 
       var token = OAuth.getToken();
-      if (token) {
-        fetch(apiUrl, {
-          headers: { "PRIVATE-TOKEN": token }
-        })
-          .then(function (r) {
-            if (r.ok) return r.blob();
-            // Fallback: try project web URL
-            return fetch(
-              (config.project_url || config.gitlab_url).replace(/\/$/, "") + uploadPath,
-              { headers: { "Authorization": "Bearer " + token } }
-            ).then(function (r2) { return r2.ok ? r2.blob() : null; });
-          })
-          .then(function (blob) {
-            if (blob) {
-              img.src = URL.createObjectURL(blob);
-              img.alt = "";
-              img.style.minHeight = "";
-              img.style.background = "";
-            } else {
-              img.alt = "Зображення недоступне";
-            }
-          })
-          .catch(function () {
+      if (!token) return;
+
+      // Fetch via project web URL with Bearer token
+      fetch(webUrl, {
+        headers: { "Authorization": "Bearer " + token },
+        redirect: "follow",
+      })
+        .then(function (r) { return r.ok ? r.blob() : null; })
+        .then(function (blob) {
+          if (blob) {
+            img.src = URL.createObjectURL(blob);
+            img.alt = "";
+            img.style.minHeight = "";
+            img.style.background = "";
+          } else {
             img.alt = "Зображення недоступне";
-          });
-      }
+            img.style.minHeight = "";
+            img.style.background = "";
+          }
+        })
+        .catch(function () {
+          img.alt = "Зображення недоступне";
+          img.style.minHeight = "";
+          img.style.background = "";
+        });
     });
   }
 
