@@ -57,19 +57,20 @@
   // --- Context detection ---
 
   function detectMrContext() {
-    // Try version.json first
-    return fetch("version.json")
+    // Fallback: parse URL first (instant, no network)
+    var match = window.location.pathname.match(/\/mr-(\d+)\//);
+    if (match) return Promise.resolve(parseInt(match[1], 10));
+
+    // Try version.json at site root
+    var base = document.querySelector('link[rel="canonical"]');
+    var versionUrl = base ? new URL("version.json", base.href).href : "version.json";
+
+    return fetch(versionUrl)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
-        if (data && data.mr_iid) return data.mr_iid;
-        // Fallback: parse URL
-        var match = window.location.pathname.match(/\/mr-(\d+)\//);
-        return match ? parseInt(match[1], 10) : null;
+        return (data && data.mr_iid) ? data.mr_iid : null;
       })
-      .catch(function () {
-        var match = window.location.pathname.match(/\/mr-(\d+)\//);
-        return match ? parseInt(match[1], 10) : null;
-      });
+      .catch(function () { return null; });
   }
 
   function detectCurrentFile() {
