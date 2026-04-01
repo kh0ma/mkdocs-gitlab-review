@@ -39,11 +39,14 @@ class GitLabReviewPlugin(BasePlugin):
         project_id = str(self.config["project_id"] or os.environ.get("CI_PROJECT_ID", ""))
         oauth_client_id = self.config["oauth_client_id"] or os.environ.get("GITLAB_REVIEW_CLIENT_ID", "")
 
+        project_url = os.environ.get("CI_PROJECT_URL", gitlab_url)
+
         site_url = config.get("site_url", "") or ""
 
         self._plugin_config = {
             "gitlab_url": gitlab_url,
             "project_id": project_id,
+            "project_url": project_url,
             "oauth_client_id": oauth_client_id,
             "site_url": site_url.rstrip("/") + "/",
         }

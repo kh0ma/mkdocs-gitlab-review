@@ -310,7 +310,7 @@
     body.className = "glr-note__body";
     var cleaned = stripFilePrefix(note.body);
     if (cleaned && cleaned.charAt(0) === "<") {
-      body.innerHTML = cleaned;
+      body.innerHTML = fixRelativeUrls(cleaned);
     } else {
       body.textContent = cleaned;
     }
@@ -458,10 +458,16 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
         if (data && data.url) {
-          // GitLab returns relative URL, make absolute
-          return data.url.startsWith("http") ? data.url : config.gitlab_url + data.url;
+          // GitLab returns URL relative to project (e.g. /uploads/hash/image.png)
+          // Build full URL using project_url
+          if (data.url.startsWith("http")) return data.url;
+          var base = config.project_url || config.gitlab_url;
+          return base.replace(/\/$/, "") + data.url;
         }
-        return data && data.full_path ? config.gitlab_url + data.full_path : null;
+        if (data && data.full_path) {
+          return config.gitlab_url + data.full_path;
+        }
+        return null;
       })
       .catch(function () { return null; });
   }
@@ -633,6 +639,15 @@
   }
 
   // --- Helpers ---
+
+  function fixRelativeUrls(html) {
+    // Fix relative /uploads/ URLs in GitLab-rendered HTML to point to project
+    if (!html) return html;
+    var base = (config.project_url || config.gitlab_url).replace(/\/$/, "");
+    return html
+      .replace(/src="\/uploads\//g, 'src="' + base + '/uploads/')
+      .replace(/href="\/uploads\//g, 'href="' + base + '/uploads/');
+  }
 
   function stripFilePrefix(text) {
     if (!text) return text;
