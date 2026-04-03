@@ -44,8 +44,11 @@
       toggleBtn.style.display = "";
 
       if (OAuth.isLoggedIn()) {
-        // Auto-activate review mode
+        // Auto-activate if logged in or ?review param present
         activateReview(toggleBtn);
+      } else if (new URLSearchParams(window.location.search).has("review")) {
+        // ?review param → login then activate
+        OAuth.login();
       }
 
       toggleBtn.addEventListener("click", function () {
@@ -218,9 +221,16 @@
       var canComment = true;
       var discussions = findDiscussionsForLine(file, line);
 
-      // Add comment gutter icon
+      // Diff visualization — mark block change type
       block.classList.add("glr-block");
       block.classList.add("glr-block--commentable");
+      if (isChanged && fileInfo.new_file) {
+        block.classList.add("glr-block--added");
+      } else if (isChanged && fileInfo.new_lines.has(line)) {
+        block.classList.add("glr-block--added");
+      } else if (isChanged) {
+        block.classList.add("glr-block--context");
+      }
 
       var btn = document.createElement("span");
       btn.className = "glr-action-btn";
@@ -267,6 +277,107 @@
 
     // Render file status banner
     renderFileStatus(isChanged);
+
+    // Render comments dashboard panel
+    renderCommentsDashboard();
+  }
+
+  function renderCommentsDashboard() {
+    // Remove old dashboard
+    var old = document.getElementById("glr-dashboard");
+    if (old) old.remove();
+
+    if (state.discussions.length === 0) return;
+
+    var panel = document.createElement("div");
+    panel.id = "glr-dashboard";
+    panel.className = "glr-dashboard";
+
+    var header = document.createElement("div");
+    header.className = "glr-dashboard__header";
+
+    var resolved = state.discussions.filter(function (d) {
+      return d.notes && d.notes.some(function (n) { return n.resolved; });
+    }).length;
+    var total = state.discussions.length;
+
+    header.innerHTML = '<span class="glr-dashboard__title">\uD83D\uDCAC Коментарі</span>' +
+      '<span class="glr-dashboard__count">' + resolved + '/' + total + ' вирішено</span>';
+
+    var toggle = document.createElement("button");
+    toggle.className = "glr-dashboard__toggle";
+    toggle.textContent = "▼";
+    toggle.addEventListener("click", function () {
+      var list = panel.querySelector(".glr-dashboard__list");
+      if (list.style.display === "none") {
+        list.style.display = "";
+        toggle.textContent = "▼";
+      } else {
+        list.style.display = "none";
+        toggle.textContent = "▶";
+      }
+    });
+    header.appendChild(toggle);
+    panel.appendChild(header);
+
+    var list = document.createElement("div");
+    list.className = "glr-dashboard__list";
+
+    // Group discussions by file
+    var byFile = {};
+    state.discussions.forEach(function (d) {
+      var note = d.notes && d.notes[0];
+      if (!note) return;
+      var file = "";
+      var line = 0;
+      if (note.position) {
+        file = note.position.new_path || "";
+        line = note.position.new_line || 0;
+      } else if (note.body) {
+        var match = note.body.match(/^\*\*([^:]+):(\d+)\*\*/);
+        if (match) { file = match[1]; line = parseInt(match[2]); }
+      }
+      if (!file) file = "Загальні";
+      if (!byFile[file]) byFile[file] = [];
+      byFile[file].push({ discussion: d, line: line, note: note });
+    });
+
+    Object.keys(byFile).forEach(function (file) {
+      var section = document.createElement("div");
+      section.className = "glr-dashboard__section";
+
+      var fileHeader = document.createElement("div");
+      fileHeader.className = "glr-dashboard__file";
+      fileHeader.textContent = file;
+      section.appendChild(fileHeader);
+
+      byFile[file].forEach(function (item) {
+        var entry = document.createElement("div");
+        entry.className = "glr-dashboard__entry";
+        var isRes = item.discussion.notes.some(function (n) { return n.resolved; });
+        if (isRes) entry.classList.add("glr-dashboard__entry--resolved");
+
+        var author = item.note.author ? item.note.author.name : "";
+        var body = stripFilePrefix(item.note.body || "").substring(0, 80);
+        var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
+          "/-/merge_requests/" + state.mrIid + "#note_" + item.note.id;
+
+        entry.innerHTML =
+          '<span class="glr-dashboard__status">' + (isRes ? "✓" : "○") + '</span>' +
+          '<span class="glr-dashboard__line">:' + item.line + '</span> ' +
+          '<span class="glr-dashboard__author">' + author + '</span> ' +
+          '<a class="glr-dashboard__text" href="' + noteUrl + '" target="_blank">' + body + '</a>';
+
+        section.appendChild(entry);
+      });
+
+      list.appendChild(section);
+    });
+
+    panel.appendChild(list);
+
+    var content = document.querySelector(".md-content__inner");
+    if (content) content.insertBefore(panel, content.querySelector(".glr-file-status"));
   }
 
   function renderFileStatus(isChanged) {
@@ -363,11 +474,40 @@
   function renderThread(discussion) {
     var div = document.createElement("div");
     div.className = "glr-thread";
+    if (discussion.notes && discussion.notes[0] && discussion.notes[0].resolved) {
+      div.classList.add("glr-thread--resolved");
+    }
 
     (discussion.notes || []).forEach(function (note) {
       if (note.system) return;
       div.appendChild(renderNote(note));
     });
+
+    // Thread actions: resolve + reply
+    var actions = document.createElement("div");
+    actions.className = "glr-thread__actions";
+
+    // Resolve/unresolve button
+    var isResolved = discussion.notes && discussion.notes.some(function (n) { return n.resolved; });
+    var resolveBtn = document.createElement("button");
+    resolveBtn.className = "glr-thread__resolve";
+    resolveBtn.textContent = isResolved ? "Відновити" : "Вирішено";
+    resolveBtn.addEventListener("click", function () {
+      var noteId = discussion.notes[0].id;
+      var newState = !isResolved;
+      OAuth.apiFetch(
+        "/projects/" + config.project_id + "/merge_requests/" + state.mrIid +
+          "/discussions/" + discussion.id + "/notes/" + noteId,
+        { method: "PUT", body: JSON.stringify({ resolved: newState }) }
+      ).then(function () {
+        isResolved = newState;
+        resolveBtn.textContent = newState ? "Відновити" : "Вирішено";
+        div.classList.toggle("glr-thread--resolved", newState);
+      }).catch(function () {});
+    });
+    actions.appendChild(resolveBtn);
+
+    div.appendChild(actions);
 
     // Reply form
     var replyForm = renderReplyForm(discussion.id, div);
