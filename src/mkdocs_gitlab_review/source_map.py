@@ -69,9 +69,15 @@ def annotate_html(html: str, source_file: str, block_lines: list[int]) -> str:
     """Add data-source-file and data-source-line to block-level HTML elements.
 
     Matches HTML blocks sequentially with markdown block_lines.
+    Skips blocks before <!-- source-content --> marker if present.
     """
     if not block_lines:
         return html
+
+    # Find source-content marker — blocks before it are hook-generated
+    marker = "<!-- source-content -->"
+    marker_pos = html.find(marker)
+    search_start = marker_pos + len(marker) if marker_pos != -1 else 0
 
     tag_pattern = re.compile(
         r"<(" + "|".join(BLOCK_TAGS) + r")(\s[^>]*)?>",
@@ -87,6 +93,10 @@ def annotate_html(html: str, source_file: str, block_lines: list[int]) -> str:
 
         # Skip container tags — their children are the real blocks
         if tag_name in CONTAINER_TAGS:
+            continue
+
+        # Skip blocks before source-content marker
+        if match.start() < search_start:
             continue
 
         if line_idx >= len(block_lines):
