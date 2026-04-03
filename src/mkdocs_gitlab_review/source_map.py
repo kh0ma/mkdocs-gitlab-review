@@ -9,7 +9,7 @@ import re
 # Block-level HTML tags that we annotate
 BLOCK_TAGS = frozenset([
     "h1", "h2", "h3", "h4", "h5", "h6",
-    "p", "ul", "ol",
+    "p", "ul", "ol", "li",
     "table", "blockquote", "pre",
     "details", "hr",
 ])
