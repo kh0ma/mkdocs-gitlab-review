@@ -24,6 +24,7 @@ class GitLabReviewPlugin(BasePlugin):
     def __init__(self):
         super().__init__()
         self._line_maps: dict[str, dict[str, int]] = {}
+        self._page_map: dict[str, str] = {}  # git_path → mkdocs_url
         self._assets_dir = Path(__file__).parent / "assets"
 
     # ------------------------------------------------------------------
@@ -102,6 +103,10 @@ class GitLabReviewPlugin(BasePlugin):
         git_path = self._resolve_git_path(src_path, config)
         line_map = self._line_maps.get(src_path, {})
 
+        # Store git_path → MkDocs URL mapping
+        page_url = page.file.dest_path.replace("index.html", "").replace(".html", "/")
+        self._page_map[git_path] = page_url
+
         if not line_map:
             return html
 
@@ -149,8 +154,10 @@ class GitLabReviewPlugin(BasePlugin):
 
         # Config as global variable
         config_json = json.dumps(self._plugin_config)
+        page_map_json = json.dumps(self._page_map)
         parts.append(
-            f'<script>window.__GITLAB_REVIEW__={config_json};</script>'
+            f'<script>window.__GITLAB_REVIEW__={config_json};'
+            f'window.__GITLAB_REVIEW_PAGE_MAP__={page_map_json};</script>'
         )
 
         # CDN dependencies

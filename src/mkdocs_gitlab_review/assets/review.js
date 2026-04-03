@@ -541,9 +541,17 @@
             setTimeout(function () { target.style.outline = ""; }, 2000);
           } else {
             // Different file — navigate to MkDocs page with review mode
-            var pagePath = file.replace(/\.md$/, "/");
-            var baseUrl = (config.site_url || window.location.origin + "/").replace(/\/$/, "");
-            window.location.href = baseUrl + "/" + pagePath + "?review";
+            var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
+            var pageUrl = pageMap[file];
+            if (pageUrl) {
+              var baseUrl = (config.site_url || window.location.origin + "/").replace(/\/$/, "");
+              window.location.href = baseUrl + "/" + pageUrl + "?review";
+            } else {
+              // Fallback — try stripping .md
+              var pagePath = file.replace(/\.md$/, "/");
+              var baseUrl2 = (config.site_url || window.location.origin + "/").replace(/\/$/, "");
+              window.location.href = baseUrl2 + "/" + pagePath + "?review";
+            }
           }
         });
 
