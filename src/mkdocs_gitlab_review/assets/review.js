@@ -87,10 +87,11 @@
     toggleBtn.title = "Увімкнути рев'ю";
 
     // Remove all overlay elements
-    document.querySelectorAll(".glr-block, .glr-block--commentable, .glr-block--has-comments").forEach(function (el) {
-      el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments");
+    document.querySelectorAll(".glr-block").forEach(function (el) {
+      el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
+        "glr-block--added", "glr-block--context");
     });
-    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status").forEach(function (el) {
+    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard").forEach(function (el) {
       el.remove();
     });
   }
@@ -266,11 +267,9 @@
 
       block.appendChild(btn);
 
-      // Auto-expand on initial load if has comments
+      // Show badge count but keep collapsed
       if (count > 0) {
         block.classList.add("glr-block--has-comments");
-        showThreads(block, file, line, discussions, canComment);
-        isExpanded = true;
       }
       updateBtn();
     });
@@ -368,14 +367,29 @@
 
         var author = item.note.author ? item.note.author.name : "";
         var body = stripFilePrefix(item.note.body || "").substring(0, 80);
-        var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
-          "/-/merge_requests/" + state.mrIid + "#note_" + item.note.id;
 
         entry.innerHTML =
           '<span class="glr-dashboard__status">' + (isRes ? "✓" : "○") + '</span>' +
           '<span class="glr-dashboard__line">:' + item.line + '</span> ' +
           '<span class="glr-dashboard__author">' + author + '</span> ' +
-          '<a class="glr-dashboard__text" href="' + noteUrl + '" target="_blank">' + body + '</a>';
+          '<span class="glr-dashboard__text">' + body + '</span>';
+
+        // Click → scroll to the block on this page and expand thread
+        entry.style.cursor = "pointer";
+        entry.addEventListener("click", function () {
+          var target = document.querySelector('[data-source-file="' + file + '"][data-source-line="' + item.line + '"]');
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Expand thread if not already
+            var next = target.nextElementSibling;
+            if (!next || !next.classList.contains("glr-threads")) {
+              var actionBtn = target.querySelector(".glr-action-btn");
+              if (actionBtn) actionBtn.click();
+            }
+            target.style.outline = "2px solid var(--md-accent-fg-color, #536dfe)";
+            setTimeout(function () { target.style.outline = ""; }, 2000);
+          }
+        });
 
         section.appendChild(entry);
       });
