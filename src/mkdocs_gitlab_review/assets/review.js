@@ -132,7 +132,6 @@
     // Append to wrapper for proper positioning
     wrapper.appendChild(dialog);
   }
-  }
 
   function activateReview(toggleBtn) {
     state.reviewActive = true;
