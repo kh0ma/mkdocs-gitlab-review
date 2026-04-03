@@ -45,8 +45,9 @@
       toggleBtn.style.display = "";
 
       var hasReviewParam = new URLSearchParams(window.location.search).has("review");
+      var sessionReview = sessionStorage.getItem("glr-review-active") === "true";
 
-      if (hasReviewParam && OAuth.isLoggedIn()) {
+      if ((hasReviewParam || sessionReview) && OAuth.isLoggedIn()) {
         activateReview(toggleBtn);
       } else if (hasReviewParam && !OAuth.isLoggedIn()) {
         OAuth.login();
@@ -135,6 +136,7 @@
 
   function activateReview(toggleBtn) {
     state.reviewActive = true;
+    sessionStorage.setItem("glr-review-active", "true");
     toggleBtn.classList.add("glr-toolbar-btn--active");
     toggleBtn.querySelector(".glr-toolbar-btn__label").innerHTML = "\u25CF Рев'ю";
     toggleBtn.title = "Вимкнути рев'ю";
@@ -155,6 +157,7 @@
 
   function deactivateReview(toggleBtn) {
     state.reviewActive = false;
+    sessionStorage.removeItem("glr-review-active");
     toggleBtn.classList.remove("glr-toolbar-btn--active");
     toggleBtn.querySelector(".glr-toolbar-btn__label").textContent = "Рев'ю";
     toggleBtn.title = "Увімкнути рев'ю";
