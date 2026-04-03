@@ -537,10 +537,10 @@
             target.style.outline = "2px solid var(--md-accent-fg-color, #536dfe)";
             setTimeout(function () { target.style.outline = ""; }, 2000);
           } else {
-            // Different file — navigate to GitLab note
-            var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
-              "/-/merge_requests/" + state.mrIid + "#note_" + item.note.id;
-            window.open(noteUrl, "_blank");
+            // Different file — navigate to MkDocs page with review mode
+            var pagePath = file.replace(/\.md$/, "/");
+            var baseUrl = (config.site_url || window.location.origin + "/").replace(/\/$/, "");
+            window.location.href = baseUrl + "/" + pagePath + "?review";
           }
         });
 
