@@ -16,6 +16,7 @@
     discussions: [],
     currentFile: null,
     reviewActive: false,
+    baseBlocks: null,  // array of text blocks from base version
   };
 
   // --- Init ---
@@ -147,6 +148,8 @@
       fetchChangedFiles(),
       fetchDiscussions(),
     ]).then(function () {
+      return fetchBaseFile();
+    }).then(function () {
       renderOverlay();
     });
   }
@@ -162,7 +165,7 @@
       el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
         "glr-block--added", "glr-block--context");
     });
-    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, #glr-share-btn, #glr-share-dialog").forEach(function (el) {
+    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, #glr-share-btn, #glr-share-dialog, .glr-block--deleted").forEach(function (el) {
       el.remove();
     });
   }
@@ -216,7 +219,9 @@
           new_path: change.new_path,
           new_lines: parsed.new_lines,
           lineMap: parsed.lineMap,
+          deletedLines: parsed.deletedLines,
           new_file: change.new_file,
+          deleted_file: change.deleted_file,
         };
       });
     }).catch(function () {});
@@ -240,14 +245,78 @@
     return fetchPage(1).catch(function () {});
   }
 
+  function fetchBaseFile() {
+    if (!state.diffRefs || !state.currentFile) return Promise.resolve();
+    var fileInfo = state.changedFiles[state.currentFile];
+    if (!fileInfo || fileInfo.new_file) {
+      state.baseBlocks = []; // new file — no base
+      return Promise.resolve();
+    }
+
+    var filePath = encodeURIComponent(fileInfo.old_path);
+    var ref = state.diffRefs.base_sha;
+
+    return OAuth.apiFetch(
+      "/projects/" + config.project_id + "/repository/files/" + filePath + "/raw?ref=" + ref,
+      { headers: { "Accept": "text/plain" } }
+    ).then(function (text) {
+      // apiFetch returns JSON by default — for raw we get text
+      state.baseBlocks = parseMarkdownBlocks(typeof text === "string" ? text : "");
+    }).catch(function () {
+      // Try fetching as blob/text
+      var token = OAuth.getToken();
+      if (!token) { state.baseBlocks = []; return; }
+      return fetch(
+        config.gitlab_url + "/api/v4/projects/" + config.project_id +
+          "/repository/files/" + filePath + "/raw?ref=" + ref,
+        { headers: { "Authorization": "Bearer " + token } }
+      ).then(function (r) { return r.ok ? r.text() : ""; })
+        .then(function (text) {
+          state.baseBlocks = parseMarkdownBlocks(text);
+        })
+        .catch(function () { state.baseBlocks = []; });
+    });
+  }
+
+  function parseMarkdownBlocks(md) {
+    // Split markdown into blocks (by blank lines), return trimmed text per block
+    if (!md) return [];
+    var blocks = [];
+    var current = [];
+
+    // Skip frontmatter
+    var lines = md.split("\n");
+    var start = 0;
+    if (lines[0] && lines[0].trim() === "---") {
+      for (var i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === "---") { start = i + 1; break; }
+      }
+    }
+
+    for (var j = start; j < lines.length; j++) {
+      var line = lines[j];
+      if (line.trim() === "") {
+        if (current.length > 0) {
+          blocks.push(current.join("\n").trim());
+          current = [];
+        }
+      } else {
+        current.push(line);
+      }
+    }
+    if (current.length > 0) blocks.push(current.join("\n").trim());
+    return blocks;
+  }
+
   // --- Diff parsing ---
 
   function parseDiff(diff) {
     // Parse unified diff to build old↔new line mapping
-    // Returns { new_lines: Set(added new_line numbers), lineMap: Map(new_line → {old_line, new_line, type}) }
+    // Returns { new_lines: Set, lineMap: Map, deletedLines: [{old_line, text}] }
     var lines = diff.split("\n");
     var newLines = new Set();
-    var lineMap = {};  // new_line → {old_line, new_line, type}
+    var lineMap = {};
+    var deletedLines = [];
     var oldLine = 0;
     var newLine = 0;
 
@@ -263,6 +332,7 @@
         lineMap[newLine] = { old_line: null, new_line: newLine, type: "added" };
         newLine++;
       } else if (line.startsWith("-") && !line.startsWith("---")) {
+        deletedLines.push({ old_line: oldLine, text: line.substring(1), after_new_line: newLine });
         oldLine++;
       } else if (!line.startsWith("\\")) {
         // Context line
@@ -272,7 +342,7 @@
       }
     });
 
-    return { new_lines: newLines, lineMap: lineMap };
+    return { new_lines: newLines, lineMap: lineMap, deletedLines: deletedLines };
   }
 
   // --- Rendering ---
@@ -344,6 +414,11 @@
       }
       updateBtn();
     });
+
+    // Insert ghost blocks for deleted lines
+    if (isChanged && fileInfo.deletedLines && fileInfo.deletedLines.length > 0) {
+      insertDeletedBlocks(fileInfo.deletedLines);
+    }
 
     // Render file status banner
     renderFileStatus(isChanged);
@@ -472,6 +547,51 @@
 
     var content = document.querySelector(".md-content__inner");
     if (content) content.insertBefore(panel, content.querySelector(".glr-file-status"));
+  }
+
+  function insertDeletedBlocks(deletedLines) {
+    // Group consecutive deleted lines into blocks
+    var blocks = [];
+    var current = null;
+
+    deletedLines.forEach(function (dl) {
+      if (current && dl.old_line === current.endOld + 1 && dl.after_new_line === current.afterNew) {
+        current.lines.push(dl.text);
+        current.endOld = dl.old_line;
+      } else {
+        if (current) blocks.push(current);
+        current = {
+          lines: [dl.text],
+          afterNew: dl.after_new_line,
+          startOld: dl.old_line,
+          endOld: dl.old_line,
+        };
+      }
+    });
+    if (current) blocks.push(current);
+
+    // Insert each deleted block as ghost element before the corresponding new line block
+    blocks.forEach(function (block) {
+      var text = block.lines.join("\n");
+      if (!text.trim()) return;
+
+      var ghost = document.createElement("div");
+      ghost.className = "glr-block--deleted";
+      ghost.innerHTML = '<div class="glr-block--deleted__label">Видалено</div>' +
+        '<div class="glr-block--deleted__content">' + escapeHtml(text) + '</div>';
+
+      // Find the block at after_new_line to insert before
+      var target = document.querySelector(
+        '[data-source-file="' + state.currentFile + '"][data-source-line="' + block.afterNew + '"]'
+      );
+      if (target) {
+        target.insertAdjacentElement("beforebegin", ghost);
+      }
+    });
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
   }
 
   function renderFileStatus(isChanged) {
