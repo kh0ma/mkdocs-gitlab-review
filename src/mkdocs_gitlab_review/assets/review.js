@@ -287,7 +287,13 @@
     var old = document.getElementById("glr-dashboard");
     if (old) old.remove();
 
-    if (state.discussions.length === 0) return;
+    // Filter to user discussions only
+    var userDiscussions = state.discussions.filter(function (d) {
+      var note = d.notes && d.notes[0];
+      return note && !note.system && note.body;
+    });
+
+    if (userDiscussions.length === 0) return;
 
     var panel = document.createElement("div");
     panel.id = "glr-dashboard";
@@ -296,10 +302,10 @@
     var header = document.createElement("div");
     header.className = "glr-dashboard__header";
 
-    var resolved = state.discussions.filter(function (d) {
+    var resolved = userDiscussions.filter(function (d) {
       return d.notes && d.notes.some(function (n) { return n.resolved; });
     }).length;
-    var total = state.discussions.length;
+    var total = userDiscussions.length;
 
     header.innerHTML = '<span class="glr-dashboard__title">\uD83D\uDCAC Коментарі</span>' +
       '<span class="glr-dashboard__count">' + resolved + '/' + total + ' вирішено</span>';
@@ -323,11 +329,14 @@
     var list = document.createElement("div");
     list.className = "glr-dashboard__list";
 
-    // Group discussions by file
+    // Group discussions by file — skip system notes
     var byFile = {};
     state.discussions.forEach(function (d) {
       var note = d.notes && d.notes[0];
       if (!note) return;
+      // Skip system-generated discussions (commits, merges, thread events)
+      if (note.system) return;
+      if (!note.body || note.body.length === 0) return;
       var file = "";
       var line = 0;
       if (note.position) {
