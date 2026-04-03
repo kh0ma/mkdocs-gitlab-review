@@ -69,6 +69,9 @@
   function showShareButton(toggleBtn) {
     if (document.getElementById("glr-share-btn")) return;
 
+    var wrapper = document.createElement("span");
+    wrapper.style.cssText = "position:relative;display:inline-flex;";
+
     var btn = document.createElement("button");
     btn.id = "glr-share-btn";
     btn.className = "glr-toolbar-btn";
@@ -78,14 +81,15 @@
 
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
-      showShareDialog();
+      showShareDialog(wrapper);
     });
 
-    // Insert after toggle button
-    toggleBtn.insertAdjacentElement("afterend", btn);
+    wrapper.appendChild(btn);
+    // Insert before toggle button
+    toggleBtn.parentNode.insertBefore(wrapper, toggleBtn);
   }
 
-  function showShareDialog() {
+  function showShareDialog(wrapper) {
     var existing = document.getElementById("glr-share-dialog");
     if (existing) { existing.remove(); return; }
 
@@ -118,20 +122,16 @@
     // Close on outside click
     setTimeout(function () {
       document.addEventListener("click", function closeDialog(e) {
-        if (!dialog.contains(e.target) && e.target.id !== "glr-share-btn") {
+        if (!dialog.contains(e.target) && e.target.id !== "glr-share-btn" && !e.target.closest("#glr-share-btn")) {
           dialog.remove();
           document.removeEventListener("click", closeDialog);
         }
       });
     }, 0);
 
-    // Position below the share button
-    var shareBtn = document.getElementById("glr-share-btn");
-    if (shareBtn) {
-      shareBtn.insertAdjacentElement("afterend", dialog);
-    } else {
-      document.body.appendChild(dialog);
-    }
+    // Append to wrapper for proper positioning
+    wrapper.appendChild(dialog);
+  }
   }
 
   function activateReview(toggleBtn) {
@@ -165,9 +165,12 @@
       el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
         "glr-block--added", "glr-block--context");
     });
-    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, #glr-share-btn, #glr-share-dialog, .glr-block--deleted").forEach(function (el) {
+    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, #glr-share-dialog, .glr-block--deleted").forEach(function (el) {
       el.remove();
     });
+    // Remove share button wrapper
+    var shareBtn = document.getElementById("glr-share-btn");
+    if (shareBtn && shareBtn.parentNode) shareBtn.parentNode.remove();
   }
 
   // --- Context detection ---
