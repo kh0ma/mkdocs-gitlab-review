@@ -65,11 +65,82 @@
     });
   }
 
+  function showShareButton(toggleBtn) {
+    if (document.getElementById("glr-share-btn")) return;
+
+    var btn = document.createElement("button");
+    btn.id = "glr-share-btn";
+    btn.className = "glr-toolbar-btn";
+    btn.title = "Запросити рев'ю";
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>' +
+      '<span class="glr-toolbar-btn__label">Запросити рев\'ю</span>';
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      showShareDialog();
+    });
+
+    // Insert after toggle button
+    toggleBtn.insertAdjacentElement("afterend", btn);
+  }
+
+  function showShareDialog() {
+    var existing = document.getElementById("glr-share-dialog");
+    if (existing) { existing.remove(); return; }
+
+    var reviewUrl = window.location.origin + window.location.pathname + "?review";
+
+    var dialog = document.createElement("div");
+    dialog.id = "glr-share-dialog";
+    dialog.className = "glr-share-dialog";
+
+    dialog.innerHTML =
+      '<div class="glr-share-dialog__title">Запросити рев\'ю</div>' +
+      '<div class="glr-share-dialog__desc">Надішліть це посилання рев\'юеру — сторінка відкриється одразу в режимі рев\'ю</div>' +
+      '<div class="glr-share-dialog__url-row">' +
+        '<input class="glr-share-dialog__url" type="text" value="' + reviewUrl + '" readonly>' +
+        '<button class="glr-share-dialog__copy">Копіювати</button>' +
+      '</div>';
+
+    var copyBtn = dialog.querySelector(".glr-share-dialog__copy");
+    var input = dialog.querySelector(".glr-share-dialog__url");
+
+    copyBtn.addEventListener("click", function () {
+      navigator.clipboard.writeText(reviewUrl).then(function () {
+        copyBtn.textContent = "Скопійовано!";
+        setTimeout(function () { copyBtn.textContent = "Копіювати"; }, 2000);
+      });
+    });
+
+    input.addEventListener("click", function () { input.select(); });
+
+    // Close on outside click
+    setTimeout(function () {
+      document.addEventListener("click", function closeDialog(e) {
+        if (!dialog.contains(e.target) && e.target.id !== "glr-share-btn") {
+          dialog.remove();
+          document.removeEventListener("click", closeDialog);
+        }
+      });
+    }, 0);
+
+    // Position below the share button
+    var shareBtn = document.getElementById("glr-share-btn");
+    if (shareBtn) {
+      shareBtn.insertAdjacentElement("afterend", dialog);
+    } else {
+      document.body.appendChild(dialog);
+    }
+  }
+
   function activateReview(toggleBtn) {
     state.reviewActive = true;
     toggleBtn.classList.add("glr-toolbar-btn--active");
     toggleBtn.querySelector(".glr-toolbar-btn__label").innerHTML = "\u25CF Рев'ю";
     toggleBtn.title = "Вимкнути рев'ю";
+
+    // Show share button
+    showShareButton(toggleBtn);
 
     Promise.all([
       fetchDiffRefs(),
@@ -91,7 +162,7 @@
       el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
         "glr-block--added", "glr-block--context");
     });
-    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard").forEach(function (el) {
+    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, #glr-share-btn, #glr-share-dialog").forEach(function (el) {
       el.remove();
     });
   }

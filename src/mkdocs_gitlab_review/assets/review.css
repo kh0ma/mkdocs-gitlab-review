@@ -337,6 +337,70 @@
   color: var(--md-accent-fg-color, #536dfe);
 }
 
+/* --- Share dialog --- */
+
+.glr-share-dialog {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.4rem;
+  background: var(--md-default-bg-color, #fff);
+  border: 1px solid var(--md-default-fg-color--lightest, #ddd);
+  border-radius: 0.4rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 0.8rem;
+  width: 22rem;
+  z-index: 100;
+}
+
+.glr-share-dialog__title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+}
+
+.glr-share-dialog__desc {
+  font-size: 0.75rem;
+  color: var(--md-default-fg-color--light, #666);
+  margin-bottom: 0.6rem;
+}
+
+.glr-share-dialog__url-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.glr-share-dialog__url {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--md-default-fg-color--lightest, #ddd);
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
+  font-family: var(--md-code-font-family, monospace);
+  background: var(--md-code-bg-color, #f5f5f5);
+  color: var(--md-default-fg-color, #333);
+  outline: none;
+}
+
+.glr-share-dialog__url:focus {
+  border-color: var(--md-accent-fg-color, #536dfe);
+}
+
+.glr-share-dialog__copy {
+  padding: 0.35rem 0.7rem;
+  background: var(--md-primary-fg-color, #4051b5);
+  color: #fff;
+  border: none;
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.glr-share-dialog__copy:hover {
+  opacity: 0.9;
+}
+
 /* --- Diff visualization --- */
 
 .glr-block--added {
