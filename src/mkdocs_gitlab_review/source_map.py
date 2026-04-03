@@ -5,7 +5,6 @@ corresponds to the N-th content block in the markdown source.
 """
 
 import re
-from html.parser import HTMLParser
 
 # Block-level HTML tags that we annotate
 BLOCK_TAGS = frozenset([

@@ -4,13 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mkdocs-gitlab-review"
-version = "0.1.0"
+dynamic = ["version"]
 description = "MkDocs plugin for inline GitLab MR review comments on rendered pages"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 dependencies = [
     "mkdocs>=1.4",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
 ]
 
 [project.entry-points."mkdocs.plugins"]
@@ -21,3 +28,24 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 mkdocs_gitlab_review = ["assets/*"]
+
+[tool.setuptools_scm]
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.coverage.run]
+source = ["mkdocs_gitlab_review"]
+
+[tool.coverage.report]
+show_missing = true

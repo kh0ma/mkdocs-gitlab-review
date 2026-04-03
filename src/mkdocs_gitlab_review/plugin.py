@@ -3,7 +3,6 @@
 import json
 import logging
 import os
-from importlib.resources import files as pkg_files
 from pathlib import Path
 
 from mkdocs.config import config_options
@@ -37,7 +36,9 @@ class GitLabReviewPlugin(BasePlugin):
 
         gitlab_url = self.config["gitlab_url"] or os.environ.get("CI_SERVER_URL", "")
         project_id = str(self.config["project_id"] or os.environ.get("CI_PROJECT_ID", ""))
-        oauth_client_id = self.config["oauth_client_id"] or os.environ.get("GITLAB_REVIEW_CLIENT_ID", "")
+        oauth_client_id = (
+            self.config["oauth_client_id"] or os.environ.get("GITLAB_REVIEW_CLIENT_ID", "")
+        )
 
         project_url = os.environ.get("CI_PROJECT_URL", gitlab_url)
 
@@ -58,12 +59,38 @@ class GitLabReviewPlugin(BasePlugin):
         return config
 
     def on_page_markdown(self, markdown, /, *, page, config, files):
-        """Parse markdown and build a source line number map."""
+        """Parse markdown and build a source line number map.
+
+        Reads the ORIGINAL file from disk (not the hook-modified markdown)
+        to get correct line numbers that match git diff positions.
+        Hooks may prepend content (e.g. frontmatter tables), shifting lines.
+        """
         if not self.config["enabled"]:
             return markdown
 
         src_path = page.file.src_path
-        self._line_maps[src_path] = build_block_lines(markdown)
+        docs_dir = Path(config["docs_dir"])
+        file_path = docs_dir / src_path
+
+        try:
+            original_md = file_path.resolve().read_text()
+        except OSError:
+            original_md = markdown
+
+        # If file has frontmatter (---\n...\n---), skip it for line counting
+        # since frontmatter lines are not in the rendered content
+        lines = original_md.split("\n")
+        offset = 0
+        if lines and lines[0].strip() == "---":
+            for i, line in enumerate(lines[1:], start=1):
+                if line.strip() == "---":
+                    offset = i + 1  # skip frontmatter + closing ---
+                    break
+            original_md = "\n".join(lines[offset:])
+
+        block_lines = build_block_lines(original_md)
+        # Adjust line numbers to account for frontmatter
+        self._line_maps[src_path] = [ln + offset for ln in block_lines]
         return markdown
 
     def on_page_content(self, html, /, *, page, config, files):
@@ -132,7 +159,8 @@ class GitLabReviewPlugin(BasePlugin):
         )
         # Quill.js WYSIWYG editor
         parts.append(
-            '<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">'
+            '<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css"'
+            ' rel="stylesheet">'
         )
         parts.append(
             '<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>'
