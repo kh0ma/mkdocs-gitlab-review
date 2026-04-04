@@ -558,12 +558,19 @@
             // Different file — navigate to MkDocs page with review mode
             var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
             var pageUrl = pageMap[file];
-            // Use current URL base (preserves /mr-N/ prefix)
             var currentBase = getCurrentSiteBase();
-            if (pageUrl) {
+
+            if (pageUrl !== undefined) {
               window.location.href = currentBase + pageUrl + "?review";
             } else {
-              var pagePath = file.replace(/\.md$/, "/");
+              // Try common path transformations
+              var pagePath = file
+                .replace(/\.md$/, "/")
+                .replace(/^index\/$/, "");
+              // If path is just a filename like INTENT.md, FAQ.md — check if root pages
+              if (pagePath.indexOf("/") === -1) {
+                pagePath = pagePath.toLowerCase();
+              }
               window.location.href = currentBase + pagePath + "?review";
             }
           }

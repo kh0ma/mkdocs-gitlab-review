@@ -140,8 +140,7 @@ class GitLabReviewPlugin(BasePlugin):
             real_path = abs_path
 
         # Make relative to the git repo root (parent of docs_dir, typically)
-        # Try to find the git root by walking up
-        git_root = docs_dir.parent
+        git_root = docs_dir.parent.resolve()
         try:
             return str(real_path.relative_to(git_root))
         except ValueError:
