@@ -441,6 +441,10 @@
 
 /* --- Thread resolution --- */
 
+.glr-thread {
+  position: relative;
+}
+
 .glr-thread--resolved {
   opacity: 0.5;
 }
@@ -449,25 +453,41 @@
   opacity: 0.8;
 }
 
-.glr-thread__actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.3rem;
-}
-
 .glr-thread__resolve {
-  background: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--md-default-bg-color, #fff);
   border: 1px solid var(--md-default-fg-color--lightest, #ddd);
-  border-radius: 0.2rem;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.7rem;
+  border-radius: 1rem;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.65rem;
   cursor: pointer;
-  color: var(--md-default-fg-color--light, #666);
+  color: var(--md-default-fg-color--light, #888);
+  transition: all 0.15s;
+  white-space: nowrap;
 }
 
 .glr-thread__resolve:hover {
-  border-color: var(--md-accent-fg-color, #536dfe);
-  color: var(--md-accent-fg-color, #536dfe);
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.glr-thread__resolve--active {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  color: #2e7d32;
+}
+
+.glr-thread__resolve--active:hover {
+  background: #fff;
+  border-color: var(--md-default-fg-color--lightest, #ddd);
+  color: var(--md-default-fg-color--light, #888);
+}
+
+.glr-thread__resolve:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 /* --- Comments dashboard --- */

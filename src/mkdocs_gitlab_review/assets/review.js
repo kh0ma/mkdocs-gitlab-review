@@ -754,31 +754,28 @@
       div.appendChild(renderNote(note));
     });
 
-    // Thread actions: resolve + reply
-    var actions = document.createElement("div");
-    actions.className = "glr-thread__actions";
-
-    // Resolve/unresolve button
+    // Resolve toggle — top-right of thread
     var isResolved = discussion.notes && discussion.notes.some(function (n) { return n.resolved; });
     var resolveBtn = document.createElement("button");
-    resolveBtn.className = "glr-thread__resolve";
-    resolveBtn.textContent = isResolved ? "Відновити" : "Вирішено";
+    resolveBtn.className = "glr-thread__resolve" + (isResolved ? " glr-thread__resolve--active" : "");
+    resolveBtn.innerHTML = (isResolved ? "✓ " : "○ ") + (isResolved ? "Вирішено" : "Вирішити");
     resolveBtn.addEventListener("click", function () {
       var noteId = discussion.notes[0].id;
       var newState = !isResolved;
+      resolveBtn.disabled = true;
       OAuth.apiFetch(
         "/projects/" + config.project_id + "/merge_requests/" + state.mrIid +
           "/discussions/" + discussion.id + "/notes/" + noteId,
         { method: "PUT", body: JSON.stringify({ resolved: newState }) }
       ).then(function () {
         isResolved = newState;
-        resolveBtn.textContent = newState ? "Відновити" : "Вирішено";
+        resolveBtn.className = "glr-thread__resolve" + (newState ? " glr-thread__resolve--active" : "");
+        resolveBtn.innerHTML = (newState ? "✓ " : "○ ") + (newState ? "Вирішено" : "Вирішити");
+        resolveBtn.disabled = false;
         div.classList.toggle("glr-thread--resolved", newState);
-      }).catch(function () {});
+      }).catch(function () { resolveBtn.disabled = false; });
     });
-    actions.appendChild(resolveBtn);
-
-    div.appendChild(actions);
+    div.insertBefore(resolveBtn, div.firstChild);
 
     // Reply form
     var replyForm = renderReplyForm(discussion.id, div);
