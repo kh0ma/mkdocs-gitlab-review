@@ -152,6 +152,7 @@
       return fetchBaseFile();
     }).then(function () {
       renderOverlay();
+      scrollToHashLine();
     });
   }
 
@@ -192,6 +193,25 @@
         return (data && data.mr_iid) ? data.mr_iid : null;
       })
       .catch(function () { return null; });
+  }
+
+  function scrollToHashLine() {
+    var hash = window.location.hash;
+    var match = hash.match(/^#glr-line-(\d+)$/);
+    if (!match) return;
+
+    var line = match[1];
+    var target = document.querySelector('[data-source-line="' + line + '"]');
+    if (!target) return;
+
+    setTimeout(function () {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Expand thread
+      var actionBtn = target.querySelector(".glr-action-btn");
+      if (actionBtn) actionBtn.click();
+      target.style.outline = "2px solid var(--md-accent-fg-color, #536dfe)";
+      setTimeout(function () { target.style.outline = ""; }, 2000);
+    }, 300);
   }
 
   function getCurrentSiteBase() {
@@ -561,17 +581,15 @@
             var currentBase = getCurrentSiteBase();
 
             if (pageUrl !== undefined) {
-              window.location.href = currentBase + pageUrl + "?review";
+              window.location.href = currentBase + pageUrl + "?review#glr-line-" + item.line;
             } else {
-              // Try common path transformations
               var pagePath = file
                 .replace(/\.md$/, "/")
                 .replace(/^index\/$/, "");
-              // If path is just a filename like INTENT.md, FAQ.md — check if root pages
               if (pagePath.indexOf("/") === -1) {
                 pagePath = pagePath.toLowerCase();
               }
-              window.location.href = currentBase + pagePath + "?review";
+              window.location.href = currentBase + pagePath + "?review#glr-line-" + item.line;
             }
           }
         });
