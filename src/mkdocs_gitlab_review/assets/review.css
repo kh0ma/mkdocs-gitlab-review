@@ -441,10 +441,6 @@
 
 /* --- Thread resolution --- */
 
-.glr-thread {
-  position: relative;
-}
-
 .glr-thread--resolved {
   opacity: 0.5;
 }
@@ -454,9 +450,7 @@
 }
 
 .glr-thread__resolve {
-  position: absolute;
-  top: 0;
-  right: 0;
+  float: right;
   background: var(--md-default-bg-color, #fff);
   border: 1px solid var(--md-default-fg-color--lightest, #ddd);
   border-radius: 1rem;
@@ -466,6 +460,7 @@
   color: var(--md-default-fg-color--light, #888);
   transition: all 0.15s;
   white-space: nowrap;
+  margin-left: 0.5rem;
 }
 
 .glr-thread__resolve:hover {
