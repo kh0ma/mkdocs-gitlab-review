@@ -194,6 +194,21 @@
       .catch(function () { return null; });
   }
 
+  function getCurrentSiteBase() {
+    // Get site base URL from MkDocs config, preserving /mr-N/ prefix
+    var configEl = document.getElementById("__config");
+    if (configEl) {
+      try {
+        var mkConf = JSON.parse(configEl.textContent);
+        if (mkConf.base) {
+          return new URL(mkConf.base, window.location.href).href.replace(/\/$/, "") + "/";
+        }
+      } catch (_) {}
+    }
+    // Fallback: use site_url from plugin config
+    return (config.site_url || window.location.origin + "/");
+  }
+
   function detectCurrentFile() {
     // Find the first element with data-source-file
     var el = document.querySelector("[data-source-file]");
@@ -543,14 +558,13 @@
             // Different file — navigate to MkDocs page with review mode
             var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
             var pageUrl = pageMap[file];
+            // Use current URL base (preserves /mr-N/ prefix)
+            var currentBase = getCurrentSiteBase();
             if (pageUrl) {
-              var baseUrl = (config.site_url || window.location.origin + "/").replace(/\/$/, "");
-              window.location.href = baseUrl + "/" + pageUrl + "?review";
+              window.location.href = currentBase + pageUrl + "?review";
             } else {
-              // Fallback — try stripping .md
               var pagePath = file.replace(/\.md$/, "/");
-              var baseUrl2 = (config.site_url || window.location.origin + "/").replace(/\/$/, "");
-              window.location.href = baseUrl2 + "/" + pagePath + "?review";
+              window.location.href = currentBase + pagePath + "?review";
             }
           }
         });
