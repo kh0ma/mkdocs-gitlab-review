@@ -400,6 +400,9 @@
 
       if (file !== state.currentFile) return;
 
+      // Skip nested annotated elements (e.g. <p> inside <li>)
+      if (block.parentElement && block.parentElement.closest("[data-source-file]")) return;
+
       var canComment = true;
       var discussions = findDiscussionsForLine(file, line);
 
@@ -1097,11 +1100,6 @@
     // Resolve old_line/new_line from diff line mapping
     var mapping = fileInfo.lineMap[line];
 
-    if (!mapping) {
-      // Line not in any diff hunk — general discussion
-      return postGeneralComment(file, line, body);
-    }
-
     var position = {
       position_type: "text",
       base_sha: state.diffRefs.base_sha,
@@ -1111,11 +1109,17 @@
       new_path: fileInfo.new_path,
     };
 
-    if (fileInfo.new_file || mapping.type === "added") {
-      position.new_line = mapping.new_line;
+    if (mapping) {
+      if (fileInfo.new_file || mapping.type === "added") {
+        position.new_line = mapping.new_line;
+      } else {
+        if (mapping.old_line !== null) position.old_line = mapping.old_line;
+        position.new_line = mapping.new_line;
+      }
     } else {
-      if (mapping.old_line !== null) position.old_line = mapping.old_line;
-      position.new_line = mapping.new_line;
+      // Line outside diff hunk — still try inline with new_line only
+      // GitLab accepts inline comments on any line of changed files
+      position.new_line = line;
     }
 
     // Try inline comment, fallback to general on error
@@ -1123,7 +1127,7 @@
       "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
       { method: "POST", body: JSON.stringify({ body: body, position: position }) }
     ).catch(function () {
-      // Inline failed (line outside diff context) — fallback
+      // Inline failed — fallback to general discussion
       return postGeneralComment(file, line, body);
     });
   }
