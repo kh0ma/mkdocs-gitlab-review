@@ -409,9 +409,6 @@
 
       if (file !== state.currentFile) return;
 
-      // Skip nested annotated elements (e.g. <p> inside <li>)
-      if (block.parentElement && block.parentElement.closest("[data-source-file]")) return;
-
       var canComment = true;
       var discussions = findDiscussionsForLine(file, line);
 
