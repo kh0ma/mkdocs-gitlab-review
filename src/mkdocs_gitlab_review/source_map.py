@@ -124,6 +124,14 @@ def annotate_html(html: str, source_file: str, block_lines: list[int]) -> str:
             continue
 
         if line_idx >= len(block_lines):
+            # Log the unmatched HTML block for diagnostics
+            import logging
+            context = html[match.start():match.start()+120].replace('\n', '\\n')
+            logging.getLogger("mkdocs.plugins.gitlab_review").warning(
+                f"source_map: {source_file}: ran out of block_lines "
+                f"({len(block_lines)}) at HTML block #{line_idx}: "
+                f"<{tag_name}> at pos {match.start()}: {context!r}"
+            )
             break
 
         tag_end = match.end()
