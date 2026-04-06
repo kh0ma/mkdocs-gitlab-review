@@ -70,6 +70,7 @@ def annotate_html(html: str, source_file: str, block_lines: list[int]) -> str:
 
     Matches HTML blocks sequentially with markdown block_lines.
     Skips blocks before <!-- source-content --> marker if present.
+    Skips <p> and <pre> that are direct children of <li> (loose list rendering).
     """
     if not block_lines:
         return html
@@ -79,20 +80,40 @@ def annotate_html(html: str, source_file: str, block_lines: list[int]) -> str:
     marker_pos = html.find(marker)
     search_start = marker_pos + len(marker) if marker_pos != -1 else 0
 
+    # Match opening and closing tags we care about
     tag_pattern = re.compile(
-        r"<(" + "|".join(BLOCK_TAGS) + r")(\s[^>]*)?>",
+        r"<(/)?(li|" + "|".join(BLOCK_TAGS) + r")(\s[^>]*)?>",
         re.IGNORECASE,
     )
 
     result = []
     pos = 0
     line_idx = 0
+    li_depth = 0  # track if we're inside a <li>
 
     for match in tag_pattern.finditer(html):
-        tag_name = match.group(1).lower()
+        is_close = match.group(1) == "/"
+        tag_name = match.group(2).lower()
+
+        # Track li open/close to detect p-inside-li
+        if tag_name == "li":
+            if not is_close:
+                li_depth += 1
+            else:
+                li_depth = max(0, li_depth - 1)
+            # li itself is handled below when not a closing tag
+            if is_close:
+                continue
+
+        if is_close:
+            continue
 
         # Skip container tags — their children are the real blocks
         if tag_name in CONTAINER_TAGS:
+            continue
+
+        # Skip <p> and <pre> that are inside a <li> (loose list: <li><p>text</p></li>)
+        if tag_name in ("p", "pre") and li_depth > 0:
             continue
 
         # Skip blocks before source-content marker
