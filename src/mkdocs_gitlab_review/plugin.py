@@ -110,7 +110,6 @@ class GitLabReviewPlugin(BasePlugin):
         if not line_map:
             return html
 
-        log.info(f"annotating {src_path}: {len(line_map)} block_lines, html length={len(html)}")
         return annotate_html(html, git_path, line_map)
 
     def on_post_page(self, output, /, *, page, config):

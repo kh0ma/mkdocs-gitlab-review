@@ -93,7 +93,6 @@ def annotate_html(html: str, source_file: str, block_lines: list[int]) -> str:
     pos = 0
     line_idx = 0
     li_depth = 0  # track if we're inside a <li>
-    total_html_blocks = 0  # count all annotatable HTML blocks
 
     for match in tag_pattern.finditer(html):
         is_close = match.group(1) == "/"
@@ -124,30 +123,13 @@ def annotate_html(html: str, source_file: str, block_lines: list[int]) -> str:
         if match.start() < search_start:
             continue
 
-        total_html_blocks += 1
-
         if line_idx >= len(block_lines):
-            # Log the unmatched HTML block for diagnostics
-            import logging
-            context = html[match.start():match.start()+200].replace('\n', '\\n')
-            prev_ctx = html[_last_annotated[1]:_last_annotated[1]+200].replace('\n', '\\n') if '_last_annotated' in dir() else 'N/A'
-            logging.getLogger("mkdocs.plugins.gitlab_review").warning(
-                f"source_map: {source_file}: ran out of block_lines "
-                f"({len(block_lines)}) at HTML block #{total_html_blocks}: "
-                f"<{tag_name}> context: {context!r}"
-            )
-            logging.getLogger("mkdocs.plugins.gitlab_review").warning(
-                f"  previous annotated block was <{_last_annotated[0]}> line={_last_annotated[2]}: {prev_ctx!r}"
-            )
             break
 
         tag_end = match.end()
         insert_pos = tag_end - 1  # position of >
         line_num = block_lines[line_idx]
         line_idx += 1
-
-        # Track last annotated block for diagnostics
-        _last_annotated = (tag_name, match.start(), line_num)
 
         attrs = f' data-source-file="{source_file}" data-source-line="{line_num}"'
         result.append(html[pos:insert_pos])
