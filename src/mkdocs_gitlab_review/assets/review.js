@@ -248,23 +248,32 @@
   }
 
   function fetchChangedFiles() {
-    return OAuth.apiFetch(
-      "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/changes?per_page=100"
-    ).then(function (data) {
-      var changes = data.changes || [];
-      changes.forEach(function (change) {
-        var parsed = parseDiff(change.diff || "");
-        state.changedFiles[change.new_path] = {
-          old_path: change.old_path,
-          new_path: change.new_path,
-          new_lines: parsed.new_lines,
-          lineMap: parsed.lineMap,
-          deletedLines: parsed.deletedLines,
-          new_file: change.new_file,
-          deleted_file: change.deleted_file,
-        };
-      });
-    }).catch(function () {});
+    var basePath = "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/diffs";
+
+    function fetchPage(page) {
+      return OAuth.apiFetch(basePath + "?per_page=20&page=" + page)
+        .then(function (diffs) {
+          if (!diffs || !diffs.length) return;
+          diffs.forEach(function (change) {
+            var parsed = parseDiff(change.diff || "");
+            // If diff is empty/truncated but file has many lines, mark as large
+            var isLarge = !change.diff || change.diff.length === 0;
+            state.changedFiles[change.new_path] = {
+              old_path: change.old_path,
+              new_path: change.new_path,
+              new_lines: parsed.new_lines,
+              lineMap: parsed.lineMap,
+              deletedLines: parsed.deletedLines,
+              new_file: change.new_file,
+              deleted_file: change.deleted_file,
+              too_large: change.too_large || isLarge,
+            };
+          });
+          if (diffs.length === 20) return fetchPage(page + 1);
+        });
+    }
+
+    return fetchPage(1).catch(function () {});
   }
 
   function fetchDiscussions() {
@@ -1126,7 +1135,10 @@
     return OAuth.apiFetch(
       "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions",
       { method: "POST", body: JSON.stringify({ body: body, position: position }) }
-    ).catch(function () {
+    ).catch(function (err) {
+      // Log why inline failed for debugging
+      console.warn("[glr] Inline comment failed, falling back to general. Error:", err,
+        "Position:", JSON.stringify(position));
       // Inline failed — fallback to general discussion
       return postGeneralComment(file, line, body);
     });
