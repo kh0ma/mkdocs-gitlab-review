@@ -50,11 +50,13 @@
       if ((hasReviewParam || sessionReview) && OAuth.isLoggedIn()) {
         activateReview(toggleBtn);
       } else if (hasReviewParam && !OAuth.isLoggedIn()) {
+        sessionStorage.setItem("glr-review-active", "true");
         OAuth.login();
       }
 
       toggleBtn.addEventListener("click", function () {
         if (!OAuth.isLoggedIn()) {
+          sessionStorage.setItem("glr-review-active", "true");
           OAuth.login();
           return;
         }
