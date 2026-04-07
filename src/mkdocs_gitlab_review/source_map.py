@@ -58,11 +58,14 @@ def build_block_lines(markdown: str) -> list[int]:
             block_lines.append(i)
             in_block = True
         elif re.match(r"^(?:[-*+]|\d+\.)\s", stripped):
-            # Each list item is its own block, even in tight lists (no blank line between items)
+            # Each list item is its own block, even in tight lists
             block_lines.append(i)
 
         # Headings and HRs are always their own block
         if re.match(r"^#{1,6}\s", stripped) or re.match(r"^(-{3,}|_{3,}|\*{3,})$", stripped):
+            if in_block and block_lines[-1] != i:
+                # Heading/HR appeared mid-block — split it out as new block
+                block_lines.append(i)
             in_block = False
 
     return block_lines
