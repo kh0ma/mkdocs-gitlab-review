@@ -25,7 +25,7 @@
     // Handle OAuth callback if present
     var params = new URLSearchParams(window.location.search);
     if (params.has("code")) {
-      OAuth.handleCallback().then(function () { boot(); });
+      OAuth.handleCallback().then(function () { resumeDeployIfPending(); boot(); });
       return;
     }
     boot();
@@ -1320,6 +1320,88 @@
     var d = new Date(iso);
     return d.toLocaleDateString("uk-UA") + " " +
       d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // --- Deploy preview from 404 page ---
+
+  document.addEventListener("glr:deploy-preview", function (e) {
+    var mrIid = e.detail && e.detail.mrIid;
+    if (!mrIid || !config.gitlab_url || !config.project_id) return;
+
+    var statusEl = document.getElementById("mr-deploy-status");
+
+    function setStatus(text) {
+      if (statusEl) statusEl.textContent = text;
+    }
+
+    function triggerPipeline(sourceBranch) {
+      return OAuth.apiFetch(
+        "/projects/" + config.project_id + "/pipeline",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ref: sourceBranch }),
+        }
+      ).then(function (pipeline) {
+        if (pipeline && pipeline.id) {
+          setStatus("Пайплайн #" + pipeline.id + " запущено. Сторінка оновиться автоматично.");
+          document.getElementById("mr-not-found").style.display = "none";
+          document.getElementById("mr-deploying").style.display = "block";
+          var seconds = 15;
+          var countdownEl = document.getElementById("deploy-countdown");
+          if (countdownEl) countdownEl.textContent = "Автооновлення через " + seconds + " с";
+          var timer = setInterval(function () {
+            seconds--;
+            if (countdownEl) countdownEl.textContent = "Автооновлення через " + seconds + " с";
+            if (seconds <= 0) { clearInterval(timer); location.reload(); }
+          }, 1000);
+        } else {
+          setStatus("Не вдалося запустити пайплайн. Спробуйте ще раз.");
+          var btn = document.getElementById("mr-deploy-btn");
+          if (btn) btn.disabled = false;
+        }
+      }).catch(function (err) {
+        setStatus("Помилка: " + (err && err.message || "невідома"));
+        var btn = document.getElementById("mr-deploy-btn");
+        if (btn) btn.disabled = false;
+      });
+    }
+
+    function run() {
+      setStatus("Отримуємо інформацію про MR...");
+      OAuth.apiFetch("/projects/" + config.project_id + "/merge_requests/" + mrIid)
+        .then(function (mr) {
+          if (!mr || !mr.source_branch) {
+            setStatus("MR не знайдено або вже закрито.");
+            return;
+          }
+          setStatus("Запускаємо пайплайн для гілки " + mr.source_branch + "...");
+          return triggerPipeline(mr.source_branch);
+        })
+        .catch(function (err) {
+          setStatus("Помилка: " + (err && err.message || "невідома"));
+          var btn = document.getElementById("mr-deploy-btn");
+          if (btn) btn.disabled = false;
+        });
+    }
+
+    if (!OAuth.isLoggedIn()) {
+      sessionStorage.setItem("glr-deploy-mr", String(mrIid));
+      OAuth.login();
+      return;
+    }
+
+    run();
+  });
+
+  // Resume deploy after OAuth redirect — called from init() after token is stored
+  function resumeDeployIfPending() {
+    var pendingMr = sessionStorage.getItem("glr-deploy-mr");
+    if (!pendingMr) return;
+    sessionStorage.removeItem("glr-deploy-mr");
+    document.dispatchEvent(new CustomEvent("glr:deploy-preview", {
+      detail: { mrIid: parseInt(pendingMr, 10) }
+    }));
   }
 
   // --- Bootstrap ---
