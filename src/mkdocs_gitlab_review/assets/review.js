@@ -746,7 +746,7 @@
       authorEl.target = "_blank";
       authorEl.rel = "noopener";
       authorEl.className = "glr-note__author";
-      authorEl.textContent = note.author.name;
+      authorEl.textContent = note.author.name || note.author.username;
     } else {
       authorEl = document.createElement("strong");
       authorEl.textContent = "Unknown";
@@ -934,16 +934,19 @@
       var mentionFetchTimer = null;
 
       quill.on("text-change", function () {
-        var sel = quill.getSelection();
-        if (!sel) { closeMentionDropdown(); return; }
-        var textBefore = quill.getText(0, sel.index);
-        var match = textBefore.match(/@(\w*)$/);
-        if (!match) { closeMentionDropdown(); return; }
-        var query = match[1];
-        clearTimeout(mentionFetchTimer);
-        mentionFetchTimer = setTimeout(function () {
-          fetchMentionSuggestions(query, sel.index - match[0].length, sel.index);
-        }, 200);
+        // Use setTimeout to read selection after Quill settles
+        setTimeout(function () {
+          var sel = quill.getSelection();
+          if (!sel) return;
+          var textBefore = quill.getText(0, sel.index);
+          var match = textBefore.match(/@(\w*)$/);
+          if (!match) { closeMentionDropdown(); return; }
+          var query = match[1];
+          clearTimeout(mentionFetchTimer);
+          mentionFetchTimer = setTimeout(function () {
+            fetchMentionSuggestions(query, sel.index - match[0].length, sel.index);
+          }, 200);
+        }, 0);
       });
 
       function fetchMentionSuggestions(query, startIdx, endIdx) {
@@ -993,7 +996,6 @@
           mentionDropdown.remove();
           mentionDropdown = null;
         }
-        clearTimeout(mentionFetchTimer);
       }
 
       // Close on Escape
