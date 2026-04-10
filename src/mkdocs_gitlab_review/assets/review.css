@@ -82,6 +82,16 @@
   border-radius: 50%;
 }
 
+.glr-note__author {
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+}
+
+.glr-note__author:hover {
+  text-decoration: underline;
+}
+
 .glr-note__time {
   color: var(--md-default-fg-color--light, #999);
   margin-left: auto;
@@ -588,6 +598,27 @@
 
 .glr-dashboard__text:hover {
   color: var(--md-accent-fg-color, #536dfe);
+}
+
+/* --- New comment toggle button --- */
+
+.glr-new-comment-toggle {
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.6rem;
+  background: transparent;
+  border: 1px dashed var(--md-default-fg-color--lightest, #ddd);
+  border-radius: 1rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: var(--md-default-fg-color--light, #888);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.glr-new-comment-toggle:hover {
+  border-color: var(--md-accent-fg-color, #536dfe);
+  color: var(--md-accent-fg-color, #536dfe);
+  background: var(--md-accent-fg-color--transparent, rgba(83, 109, 254, 0.06));
 }
 
 /* --- @mention chips --- */
