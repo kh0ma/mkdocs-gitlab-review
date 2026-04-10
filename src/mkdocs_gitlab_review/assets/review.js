@@ -739,9 +739,19 @@
       header.appendChild(avatar);
     }
 
-    var authorSpan = document.createElement("strong");
-    authorSpan.textContent = note.author ? note.author.name : "Unknown";
-    header.appendChild(authorSpan);
+    var authorEl;
+    if (note.author) {
+      authorEl = document.createElement("a");
+      authorEl.href = (config.project_url || config.gitlab_url).replace(/\/$/, "") + "/" + note.author.username;
+      authorEl.target = "_blank";
+      authorEl.rel = "noopener";
+      authorEl.className = "glr-note__author";
+      authorEl.textContent = note.author.name;
+    } else {
+      authorEl = document.createElement("strong");
+      authorEl.textContent = "Unknown";
+    }
+    header.appendChild(authorEl);
 
     var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
       "/-/merge_requests/" + state.mrIid + "#note_" + note.id;
@@ -971,12 +981,11 @@
           mentionDropdown.appendChild(btn);
         });
 
-        // Position near the editor
+        // Position below the editor using viewport coords + scroll offset
         var editorRect = editorContainer.getBoundingClientRect();
-        mentionDropdown.style.left = "0";
-        mentionDropdown.style.top = editorRect.height + "px";
-        editorContainer.style.position = "relative";
-        editorContainer.appendChild(mentionDropdown);
+        mentionDropdown.style.left = editorRect.left + window.scrollX + "px";
+        mentionDropdown.style.top = editorRect.bottom + window.scrollY + 2 + "px";
+        document.body.appendChild(mentionDropdown);
       }
 
       function closeMentionDropdown() {
@@ -996,7 +1005,7 @@
 
       // Close on click outside
       document.addEventListener("click", function (e) {
-        if (mentionDropdown && !editorContainer.contains(e.target)) {
+        if (mentionDropdown && !editorContainer.contains(e.target) && !mentionDropdown.contains(e.target)) {
           closeMentionDropdown();
         }
       });
