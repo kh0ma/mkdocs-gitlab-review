@@ -459,9 +459,11 @@
 
       block.appendChild(btn);
 
-      // Show badge count but keep collapsed
       if (count > 0) {
         block.classList.add("glr-block--has-comments");
+        // Auto-expand threads when comments exist
+        showThreads(block, file, line, discussions, canComment);
+        isExpanded = true;
       }
       updateBtn();
     });
@@ -695,7 +697,27 @@
         var thread = renderThread(discussion);
         container.insertBefore(thread, container.lastElementChild);
       });
-      container.appendChild(form);
+
+      if (discussions.length > 0) {
+        // Wrap form in a collapsible section when threads exist
+        var formWrapper = document.createElement("div");
+        formWrapper.style.display = "none";
+        formWrapper.appendChild(form);
+
+        var toggleBtn = document.createElement("button");
+        toggleBtn.className = "glr-new-comment-toggle";
+        toggleBtn.textContent = "Новий коментар";
+        toggleBtn.addEventListener("click", function () {
+          var hidden = formWrapper.style.display === "none";
+          formWrapper.style.display = hidden ? "" : "none";
+          toggleBtn.textContent = hidden ? "Сховати форму" : "Новий коментар";
+        });
+
+        container.appendChild(toggleBtn);
+        container.appendChild(formWrapper);
+      } else {
+        container.appendChild(form);
+      }
     }
 
     block.insertAdjacentElement("afterend", container);
@@ -746,6 +768,8 @@
     } else {
       body.innerHTML = renderMd(cleaned);
     }
+    // Render @mentions as styled chips
+    highlightMentions(body);
     // Replace upload images with placeholder linking to this note in GitLab
     loadAuthImages(body, note.id);
     noteEl.appendChild(body);
@@ -894,6 +918,88 @@
           }
         }
       }, true);
+
+      // --- @mention autocomplete ---
+      var mentionDropdown = null;
+      var mentionFetchTimer = null;
+
+      quill.on("text-change", function () {
+        var sel = quill.getSelection();
+        if (!sel) { closeMentionDropdown(); return; }
+        var textBefore = quill.getText(0, sel.index);
+        var match = textBefore.match(/@(\w*)$/);
+        if (!match) { closeMentionDropdown(); return; }
+        var query = match[1];
+        clearTimeout(mentionFetchTimer);
+        mentionFetchTimer = setTimeout(function () {
+          fetchMentionSuggestions(query, sel.index - match[0].length, sel.index);
+        }, 200);
+      });
+
+      function fetchMentionSuggestions(query, startIdx, endIdx) {
+        if (!OAuth || !OAuth.isLoggedIn()) { closeMentionDropdown(); return; }
+        OAuth.apiFetch(
+          "/projects/" + config.project_id + "/members/all?search=" + encodeURIComponent(query) + "&per_page=5"
+        ).then(function (members) {
+          if (!members || members.length === 0) { closeMentionDropdown(); return; }
+          showMentionDropdown(members, startIdx, endIdx);
+        }).catch(function () { closeMentionDropdown(); });
+      }
+
+      function showMentionDropdown(members, startIdx, endIdx) {
+        closeMentionDropdown();
+        mentionDropdown = document.createElement("div");
+        mentionDropdown.id = "glr-mention-dropdown";
+
+        members.forEach(function (m) {
+          var btn = document.createElement("button");
+          btn.className = "glr-mention-item";
+          btn.type = "button";
+          var avatarHtml = m.avatar_url
+            ? '<img class="glr-mention-item__avatar" src="' + m.avatar_url + '" alt="">'
+            : '';
+          btn.innerHTML = avatarHtml +
+            '<span class="glr-mention-item__name">' + (m.name || "") + '</span>' +
+            '<span class="glr-mention-item__username">@' + (m.username || "") + '</span>';
+          btn.addEventListener("mousedown", function (e) {
+            e.preventDefault();
+            quill.deleteText(startIdx, endIdx - startIdx);
+            quill.insertText(startIdx, "@" + m.username + " ");
+            quill.setSelection(startIdx + m.username.length + 2);
+            closeMentionDropdown();
+          });
+          mentionDropdown.appendChild(btn);
+        });
+
+        // Position near the editor
+        var editorRect = editorContainer.getBoundingClientRect();
+        mentionDropdown.style.left = "0";
+        mentionDropdown.style.top = editorRect.height + "px";
+        editorContainer.style.position = "relative";
+        editorContainer.appendChild(mentionDropdown);
+      }
+
+      function closeMentionDropdown() {
+        if (mentionDropdown) {
+          mentionDropdown.remove();
+          mentionDropdown = null;
+        }
+        clearTimeout(mentionFetchTimer);
+      }
+
+      // Close on Escape
+      editorContainer.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && mentionDropdown) {
+          closeMentionDropdown();
+        }
+      });
+
+      // Close on click outside
+      document.addEventListener("click", function (e) {
+        if (mentionDropdown && !editorContainer.contains(e.target)) {
+          closeMentionDropdown();
+        }
+      });
     }, 0);
 
     return {
@@ -1160,6 +1266,33 @@
   }
 
   // --- Helpers ---
+
+  function highlightMentions(container) {
+    var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+    var nodesToReplace = [];
+    var node;
+    while ((node = walker.nextNode())) {
+      if (/@\w+/.test(node.nodeValue)) {
+        nodesToReplace.push(node);
+      }
+    }
+    nodesToReplace.forEach(function (textNode) {
+      var parts = textNode.nodeValue.split(/(@\w+)/g);
+      if (parts.length <= 1) return;
+      var frag = document.createDocumentFragment();
+      parts.forEach(function (part) {
+        if (/^@\w+$/.test(part)) {
+          var chip = document.createElement("span");
+          chip.className = "glr-mention";
+          chip.textContent = part;
+          frag.appendChild(chip);
+        } else {
+          frag.appendChild(document.createTextNode(part));
+        }
+      });
+      textNode.parentNode.replaceChild(frag, textNode);
+    });
+  }
 
   function renderMarkdown(md) {
     if (!md) return "";
