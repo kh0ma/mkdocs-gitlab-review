@@ -146,4 +146,75 @@ describe("GitlabAPI", () => {
       message: "Forbidden",
     });
   });
+
+  it("mergeMR PUTs to /merge with default options", async () => {
+    fetchMock.mockResolvedValueOnce({ id: 1, state: "merged" });
+    await window.GitlabAPI.mergeMR(7, { sha: "abc123", shouldRemoveSourceBranch: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/projects/42/merge_requests/7/merge",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ sha: "abc123", should_remove_source_branch: true }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+  });
+
+  it("mergeMR supports squash option", async () => {
+    fetchMock.mockResolvedValueOnce({});
+    await window.GitlabAPI.mergeMR(7, { sha: "abc", shouldRemoveSourceBranch: false, squash: true });
+    const call = fetchMock.mock.calls[0][1];
+    expect(JSON.parse(call.body)).toMatchObject({
+      sha: "abc",
+      should_remove_source_branch: false,
+      squash: true,
+    });
+  });
+
+  it("closeMR PUTs state_event=close", async () => {
+    fetchMock.mockResolvedValueOnce({ state: "closed" });
+    await window.GitlabAPI.closeMR(7);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/projects/42/merge_requests/7",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ state_event: "close" }),
+      })
+    );
+  });
+
+  it("reopenMR PUTs state_event=reopen", async () => {
+    fetchMock.mockResolvedValueOnce({ state: "opened" });
+    await window.GitlabAPI.reopenMR(7);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/projects/42/merge_requests/7",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ state_event: "reopen" }),
+      })
+    );
+  });
+
+  it("deleteSourceBranch DELETEs /repository/branches/:branch", async () => {
+    fetchMock.mockResolvedValueOnce({});
+    await window.GitlabAPI.deleteSourceBranch("feat/x");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/projects/42/repository/branches/" + encodeURIComponent("feat/x"),
+      { method: "DELETE" }
+    );
+  });
+
+  it("getPipelineStatus returns head pipeline state", async () => {
+    fetchMock.mockResolvedValueOnce({
+      pipeline: { status: "success", web_url: "https://g/p/-/pipelines/1" },
+    });
+    const status = await window.GitlabAPI.getPipelineStatus(7);
+    expect(status).toEqual({ status: "success", web_url: "https://g/p/-/pipelines/1" });
+  });
+
+  it("getPipelineStatus returns null-shape when no pipeline", async () => {
+    fetchMock.mockResolvedValueOnce({ pipeline: null });
+    const status = await window.GitlabAPI.getPipelineStatus(7);
+    expect(status).toEqual({ status: null, web_url: null });
+  });
 });

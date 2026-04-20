@@ -152,6 +152,54 @@
       try { parsed = JSON.parse(raw); } catch (e) { return new Set(); }
       return new Set(Object.keys(parsed));
     },
+
+    mergeMR: function (iid, opts) {
+      opts = opts || {};
+      var body = {};
+      if (opts.sha) body.sha = opts.sha;
+      if (typeof opts.shouldRemoveSourceBranch === "boolean") {
+        body.should_remove_source_branch = opts.shouldRemoveSourceBranch;
+      }
+      if (opts.squash) body.squash = true;
+      return apiFetch(projectPath("/merge_requests/" + iid + "/merge"), {
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+
+    closeMR: function (iid) {
+      return apiFetch(projectPath("/merge_requests/" + iid), {
+        method: "PUT",
+        body: JSON.stringify({ state_event: "close" }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+
+    reopenMR: function (iid) {
+      return apiFetch(projectPath("/merge_requests/" + iid), {
+        method: "PUT",
+        body: JSON.stringify({ state_event: "reopen" }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+
+    deleteSourceBranch: function (branch) {
+      return apiFetch(
+        projectPath("/repository/branches/" + encodeURIComponent(branch)),
+        { method: "DELETE" }
+      );
+    },
+
+    getPipelineStatus: function (iid) {
+      return apiFetch(projectPath("/merge_requests/" + iid)).then(function (mr) {
+        var p = mr && mr.pipeline;
+        return {
+          status: p ? p.status : null,
+          web_url: p ? p.web_url : null,
+        };
+      });
+    },
   };
 
   window.GitlabAPI = GitlabAPI;
