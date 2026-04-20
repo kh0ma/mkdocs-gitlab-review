@@ -929,88 +929,15 @@
         }
       }, true);
 
-      // --- @mention autocomplete ---
-      var mentionDropdown = null;
-      var mentionFetchTimer = null;
-
-      quill.on("text-change", function () {
-        // Use setTimeout to read selection after Quill settles
-        setTimeout(function () {
-          var sel = quill.getSelection();
-          if (!sel) return;
-          var textBefore = quill.getText(0, sel.index);
-          var match = textBefore.match(/@(\w*)$/);
-          if (!match) { closeMentionDropdown(); return; }
-          var query = match[1];
-          clearTimeout(mentionFetchTimer);
-          mentionFetchTimer = setTimeout(function () {
-            fetchMentionSuggestions(query, sel.index - match[0].length, sel.index);
-          }, 200);
-        }, 0);
+      // --- @mention autocomplete (delegated to MentionAutocomplete module) ---
+      var mentionHandle = window.MentionAutocomplete.attach(quill, {
+        container: editorContainer,
+        searchMembers: function (query, opts) {
+          return window.GitlabAPI.searchMembers(query, opts);
+        },
       });
-
-      function fetchMentionSuggestions(query, startIdx, endIdx) {
-        if (!OAuth || !OAuth.isLoggedIn()) { closeMentionDropdown(); return; }
-        OAuth.apiFetch(
-          "/projects/" + config.project_id + "/members/all?search=" + encodeURIComponent(query) + "&per_page=5"
-        ).then(function (members) {
-          if (!members || members.length === 0) { closeMentionDropdown(); return; }
-          showMentionDropdown(members, startIdx, endIdx);
-        }).catch(function () { closeMentionDropdown(); });
-      }
-
-      function showMentionDropdown(members, startIdx, endIdx) {
-        closeMentionDropdown();
-        mentionDropdown = document.createElement("div");
-        mentionDropdown.id = "glr-mention-dropdown";
-
-        members.forEach(function (m) {
-          var btn = document.createElement("button");
-          btn.className = "glr-mention-item";
-          btn.type = "button";
-          var avatarHtml = m.avatar_url
-            ? '<img class="glr-mention-item__avatar" src="' + m.avatar_url + '" alt="">'
-            : '';
-          btn.innerHTML = avatarHtml +
-            '<span class="glr-mention-item__name">' + (m.name || "") + '</span>' +
-            '<span class="glr-mention-item__username">@' + (m.username || "") + '</span>';
-          btn.addEventListener("mousedown", function (e) {
-            e.preventDefault();
-            quill.deleteText(startIdx, endIdx - startIdx);
-            quill.insertText(startIdx, "@" + m.username + " ");
-            quill.setSelection(startIdx + m.username.length + 2);
-            closeMentionDropdown();
-          });
-          mentionDropdown.appendChild(btn);
-        });
-
-        // Position below the editor using viewport coords + scroll offset
-        var editorRect = editorContainer.getBoundingClientRect();
-        mentionDropdown.style.left = editorRect.left + window.scrollX + "px";
-        mentionDropdown.style.top = editorRect.bottom + window.scrollY + 2 + "px";
-        document.body.appendChild(mentionDropdown);
-      }
-
-      function closeMentionDropdown() {
-        if (mentionDropdown) {
-          mentionDropdown.remove();
-          mentionDropdown = null;
-        }
-      }
-
-      // Close on Escape
-      editorContainer.addEventListener("keydown", function (e) {
-        if (e.key === "Escape" && mentionDropdown) {
-          closeMentionDropdown();
-        }
-      });
-
-      // Close on click outside
-      document.addEventListener("click", function (e) {
-        if (mentionDropdown && !editorContainer.contains(e.target) && !mentionDropdown.contains(e.target)) {
-          closeMentionDropdown();
-        }
-      });
+      // Detach when editor is destroyed (tied to the wrapper's lifecycle below).
+      wrapper.addEventListener("remove", function () { mentionHandle.detach(); });
     }, 0);
 
     return {
