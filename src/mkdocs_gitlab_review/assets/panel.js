@@ -702,7 +702,13 @@
       });
     }
 
-    container.appendChild(panel);
+    // Insert at the TOP of the container so the panel sits above existing
+    // sibling content (e.g., MkDocs Material's ToC inside .md-sidebar--secondary).
+    if (container.firstChild) {
+      container.insertBefore(panel, container.firstChild);
+    } else {
+      container.appendChild(panel);
+    }
 
     var unmounted = false;
     var sheetEl = null;
