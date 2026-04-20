@@ -21,6 +21,86 @@
     });
   }
 
+  // -------- Toasts --------
+
+  function showToast(message, type) {
+    type = type || "info";
+    var host = document.getElementById("glr-toast-host");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "glr-toast-host";
+      host.setAttribute("role", "status");
+      host.setAttribute("aria-live", "polite");
+      document.body.appendChild(host);
+    }
+    var toast = document.createElement("div");
+    toast.className = "glr-toast glr-toast--" + type;
+    toast.textContent = message;
+    host.appendChild(toast);
+    setTimeout(function () {
+      toast.classList.add("glr-toast--leaving");
+      setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    }, 4000);
+  }
+
+  // -------- Confirm dialog --------
+
+  function confirmDialog(opts) {
+    // opts: {title, body, confirmLabel, cancelLabel, danger, extraFields}
+    // extraFields: array of {name, label, type, default} rendered inside the dialog
+    // Returns Promise<result | null> where result = {[fieldName]: value, ...} on confirm, null on cancel
+    return new Promise(function (resolve) {
+      var dlg = document.createElement("dialog");
+      dlg.className = "glr-confirm" + (opts.danger ? " glr-confirm--danger" : "");
+
+      var fieldsHtml = "";
+      (opts.extraFields || []).forEach(function (f) {
+        if (f.type === "checkbox") {
+          fieldsHtml += '<label class="glr-confirm__field">' +
+            '<input type="checkbox" name="' + escapeHtml(f.name) + '"' + (f.default ? " checked" : "") + '>' +
+            ' <span>' + escapeHtml(f.label) + '</span>' +
+            '</label>';
+        }
+      });
+
+      dlg.innerHTML =
+        '<h3 class="glr-confirm__title">' + escapeHtml(opts.title || "Підтвердіть дію") + '</h3>' +
+        '<p class="glr-confirm__body">' + escapeHtml(opts.body || "") + '</p>' +
+        fieldsHtml +
+        '<div class="glr-confirm__buttons">' +
+        '<button type="button" class="glr-confirm__cancel">' + escapeHtml(opts.cancelLabel || "Скасувати") + '</button>' +
+        '<button type="button" class="glr-confirm__ok">' + escapeHtml(opts.confirmLabel || "OK") + '</button>' +
+        '</div>';
+      document.body.appendChild(dlg);
+
+      function close(result) {
+        if (typeof dlg.close === "function") { try { dlg.close(); } catch (e) {} }
+        if (dlg.parentNode) dlg.parentNode.removeChild(dlg);
+        resolve(result);
+      }
+
+      dlg.querySelector(".glr-confirm__cancel").addEventListener("click", function () { close(null); });
+      dlg.querySelector(".glr-confirm__ok").addEventListener("click", function () {
+        var result = {};
+        (opts.extraFields || []).forEach(function (f) {
+          var input = dlg.querySelector('[name="' + f.name + '"]');
+          if (!input) return;
+          if (f.type === "checkbox") result[f.name] = input.checked;
+        });
+        close(result);
+      });
+      dlg.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { e.preventDefault(); close(null); }
+      });
+
+      if (typeof dlg.showModal === "function") {
+        try { dlg.showModal(); } catch (e) { /* noop */ }
+      } else {
+        dlg.setAttribute("open", "");
+      }
+    });
+  }
+
   function mrWebUrl(mrIid) {
     return (config.project_url || config.gitlab_url || "") +
       "/-/merge_requests/" + mrIid;

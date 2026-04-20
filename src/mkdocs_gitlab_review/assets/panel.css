@@ -248,3 +248,79 @@
   font-size: 1.5rem;
   cursor: pointer;
 }
+
+/* Toast */
+
+#glr-toast-host {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 11000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.glr-toast {
+  pointer-events: auto;
+  min-width: 16rem;
+  max-width: 22rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.5rem;
+  background: rgba(33, 37, 41, 0.92);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  font-size: 0.85rem;
+  animation: glr-toast-in 180ms ease-out;
+}
+
+.glr-toast--error { background: rgba(207, 34, 46, 0.95); }
+.glr-toast--success { background: rgba(31, 136, 61, 0.95); }
+.glr-toast--leaving { opacity: 0; transition: opacity 220ms; }
+
+@keyframes glr-toast-in {
+  from { transform: translateY(0.5rem); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Confirm dialog */
+
+.glr-confirm[open] {
+  max-width: 22rem;
+  padding: 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  background: var(--md-default-bg-color, #fff);
+}
+.glr-confirm::backdrop { background: rgba(0, 0, 0, 0.35); }
+
+.glr-confirm__title { margin: 0 0 0.5rem; font-size: 1rem; }
+.glr-confirm__body { margin: 0 0 0.75rem; font-size: 0.85rem; }
+
+.glr-confirm__field {
+  display: flex; align-items: center; gap: 0.4rem;
+  margin-bottom: 0.5rem; font-size: 0.85rem;
+}
+
+.glr-confirm__buttons {
+  display: flex; gap: 0.4rem; justify-content: flex-end; margin-top: 0.75rem;
+}
+
+.glr-confirm__cancel,
+.glr-confirm__ok {
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.25rem;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.glr-confirm__cancel { background: rgba(0, 0, 0, 0.08); }
+.glr-confirm__ok {
+  background: var(--md-primary-fg-color, #0d7377);
+  color: #fff;
+}
+
+.glr-confirm--danger .glr-confirm__ok { background: #cf222e; }
