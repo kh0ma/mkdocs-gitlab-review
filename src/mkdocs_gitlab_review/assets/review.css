@@ -683,3 +683,65 @@
   color: var(--md-default-fg-color--light, #999);
   font-size: 0.75rem;
 }
+
+/* Dropdown anchored inside editor container (new, caret-anchored). */
+.glr-mention-dropdown {
+  position: absolute;
+  z-index: 100;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--md-default-bg-color, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 0.375rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  padding: 0.25rem;
+}
+
+.glr-mention-dropdown[data-flipped="true"] {
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.12);
+}
+
+.glr-mention-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.25rem;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.glr-mention-item--active,
+.glr-mention-item:hover {
+  background: rgba(13, 115, 119, 0.1);
+}
+
+.glr-mention-item__avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+
+.glr-mention-item__avatar--placeholder {
+  background: rgba(0, 0, 0, 0.1);
+  display: inline-block;
+}
+
+.glr-mention-item__name {
+  font-weight: 500;
+  color: var(--md-default-fg-color, #000);
+}
+
+.glr-mention-item__username {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.875rem;
+  margin-left: auto;
+}
