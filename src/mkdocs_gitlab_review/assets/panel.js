@@ -100,12 +100,12 @@
     if (required === 0 && (!approvals.rules || approvals.rules.length === 0)) {
       html += '<p class="glr-panel__empty">No approval rules configured</p>';
     } else {
-      html += '<p class="glr-panel__approvals-counter"><strong>' + approved + '</strong> of <strong>' + required + '</strong> approvals</p>';
+      html += '<p class="glr-panel__approvals-counter"><strong>' + (Number(approved) || 0) + '</strong> of <strong>' + (Number(required) || 0) + '</strong> approvals</p>';
       if (approvals.rules && approvals.rules.length > 0) {
         html += '<ul class="glr-panel__rule-list">';
         approvals.rules.forEach(function (rule) {
           var ruleApproved = (rule.approved_by || []).length;
-          var ruleReq = rule.approvals_required || 0;
+          var ruleReq = Number(rule.approvals_required) || 0;
           html += '<li class="glr-panel__rule">' +
             '<span class="glr-panel__rule-name">' + escapeHtml(rule.name) + '</span>' +
             ' <span class="glr-panel__rule-count">' + ruleApproved + '/' + ruleReq + '</span>' +
@@ -126,16 +126,20 @@
       body.innerHTML = '<p class="glr-panel__empty">No changed files</p>';
       return body;
     }
-    var html = '<p class="glr-panel__files-count"><strong>' + files.length + '</strong> files</p>';
+    var html = '<p class="glr-panel__files-count"><strong>' + (Number(files.length) || 0) + '</strong> files</p>';
     html += '<ul class="glr-panel__file-list">';
     files.forEach(function (f) {
-      var statusIcon = { added: "●", modified: "◐", deleted: "✕", renamed: "→" }[f.status] || "◐";
-      html += '<li class="glr-panel__file glr-panel__file--' + f.status + '">' +
-        '<span class="glr-panel__file-status" aria-label="' + f.status + '">' + statusIcon + '</span>' +
+      var knownStatuses = { added: 1, modified: 1, deleted: 1, renamed: 1 };
+      var safeStatus = knownStatuses[f.status] ? f.status : "modified";
+      var statusIcon = { added: "●", modified: "◐", deleted: "✕", renamed: "→" }[safeStatus];
+      var additions = Number(f.additions) || 0;
+      var deletions = Number(f.deletions) || 0;
+      html += '<li class="glr-panel__file glr-panel__file--' + safeStatus + '">' +
+        '<span class="glr-panel__file-status" aria-label="' + safeStatus + '">' + statusIcon + '</span>' +
         ' <span class="glr-panel__file-path">' + escapeHtml(f.path) + '</span>' +
         ' <span class="glr-panel__file-stats">' +
-        '<span class="glr-panel__additions">+' + f.additions + '</span> ' +
-        '<span class="glr-panel__deletions">−' + f.deletions + '</span>' +
+        '<span class="glr-panel__additions">+' + additions + '</span> ' +
+        '<span class="glr-panel__deletions">−' + deletions + '</span>' +
         '</span>' +
         '</li>';
     });
@@ -261,6 +265,7 @@
         if (approvals.__error) {
           replaceBody(blockEls.approvals, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
         } else if (mr.__error) {
+          // MR fetch failed but approvals succeeded — render approvals with a synthetic MR for the GitLab link
           replaceBody(blockEls.approvals, renderApprovalsBlock(approvals, { iid: mrIid }));
         } else {
           replaceBody(blockEls.approvals, renderApprovalsBlock(approvals, mr));
