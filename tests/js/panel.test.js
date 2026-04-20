@@ -365,3 +365,59 @@ describe("ReviewPanel — Reviewers/Assignees interactivity", () => {
     expect(api.setReviewers).toHaveBeenCalledWith(7, [1, 2]);
   });
 });
+
+describe("ReviewPanel — Changed files viewed state", () => {
+  let container, api;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="mount"></div>';
+    container = document.getElementById("mount");
+    api = {
+      getMR: vi.fn().mockResolvedValue({
+        iid: 7, state: "opened",
+        reviewers: [], assignees: [],
+        source_branch: "feat/x",
+        diff_refs: { head_sha: "sha1" },
+      }),
+      getChangedFiles: vi.fn().mockResolvedValue([
+        { path: "a.md", status: "modified", additions: 1, deletions: 0 },
+        { path: "b.md", status: "modified", additions: 2, deletions: 1 },
+      ]),
+      getApprovalState: vi.fn().mockResolvedValue({ required: 0, approved_by: [], rules: [] }),
+      getPipelineStatus: vi.fn().mockResolvedValue({ status: null }),
+      getViewedFiles: vi.fn().mockReturnValue(new Set(["a.md:sha1"])),
+      markFileViewed: vi.fn(),
+    };
+    window.__GITLAB_REVIEW__ = { gitlab_url: "https://g", project_id: "42" };
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn() });
+    loadAsset("src/mkdocs_gitlab_review/assets/panel.js");
+  });
+
+  it("files block shows checkboxes with 'a.md' already checked from localStorage", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 20));
+    const checkboxes = container.querySelectorAll('[data-block="files"] input[type="checkbox"]');
+    expect(checkboxes.length).toBe(2);
+    // a.md checked, b.md not
+    const a = Array.from(checkboxes).find(c => c.dataset.path === "a.md");
+    const b = Array.from(checkboxes).find(c => c.dataset.path === "b.md");
+    expect(a.checked).toBe(true);
+    expect(b.checked).toBe(false);
+  });
+
+  it("files block shows 'N of M viewed' summary", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 20));
+    const block = container.querySelector('[data-block="files"]');
+    expect(block.textContent).toMatch(/1.*of.*2.*viewed/i);
+  });
+
+  it("checking a box calls api.markFileViewed", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 20));
+    const b = container.querySelector('input[data-path="b.md"]');
+    b.checked = true;
+    b.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(api.markFileViewed).toHaveBeenCalledWith(7, "b.md", "sha1");
+  });
+});

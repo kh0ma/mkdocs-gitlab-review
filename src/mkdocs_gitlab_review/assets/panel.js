@@ -355,32 +355,61 @@
     return body;
   }
 
-  function renderFilesBlock(files, viewed) {
+  function renderFilesBlock(files, viewed, mr, ctx) {
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
     if (!files || files.length === 0) {
       body.innerHTML = '<p class="glr-panel__empty">No changed files</p>';
       return body;
     }
-    var html = '<p class="glr-panel__files-count"><strong>' + (Number(files.length) || 0) + '</strong> files</p>';
-    html += '<ul class="glr-panel__file-list">';
+    var headSha = (mr && mr.diff_refs && mr.diff_refs.head_sha) || "unknown";
+    var viewedCount = 0;
+    files.forEach(function (f) {
+      if (viewed.has(f.path + ":" + headSha)) viewedCount++;
+    });
+
+    var summary = document.createElement("p");
+    summary.className = "glr-panel__files-count";
+    summary.innerHTML = '<strong>' + viewedCount + '</strong> of <strong>' + files.length + '</strong> viewed';
+    body.appendChild(summary);
+
+    var ul = document.createElement("ul");
+    ul.className = "glr-panel__file-list";
     files.forEach(function (f) {
       var knownStatuses = { added: 1, modified: 1, deleted: 1, renamed: 1 };
       var safeStatus = knownStatuses[f.status] ? f.status : "modified";
-      var statusIcon = { added: "●", modified: "◐", deleted: "✕", renamed: "→" }[safeStatus];
       var additions = Number(f.additions) || 0;
       var deletions = Number(f.deletions) || 0;
-      html += '<li class="glr-panel__file glr-panel__file--' + safeStatus + '">' +
-        '<span class="glr-panel__file-status" aria-label="' + safeStatus + '">' + statusIcon + '</span>' +
+      var li = document.createElement("li");
+      li.className = "glr-panel__file glr-panel__file--" + safeStatus;
+      var key = f.path + ":" + headSha;
+      var checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "glr-panel__file-viewed";
+      checkbox.dataset.path = f.path;
+      checkbox.checked = viewed.has(key);
+      checkbox.addEventListener("change", function () {
+        if (ctx && ctx.api && ctx.api.markFileViewed && checkbox.checked) {
+          ctx.api.markFileViewed(ctx.mrIid, f.path, headSha);
+          var newCount = viewedCount + 1;
+          summary.innerHTML = '<strong>' + newCount + '</strong> of <strong>' + files.length + '</strong> viewed';
+          viewedCount = newCount;
+        }
+      });
+      li.appendChild(checkbox);
+      var statusIcon = { added: "●", modified: "◐", deleted: "✕", renamed: "→" }[safeStatus];
+      var labelHtml = ' <span class="glr-panel__file-status">' + statusIcon + '</span>' +
         ' <span class="glr-panel__file-path">' + escapeHtml(f.path) + '</span>' +
         ' <span class="glr-panel__file-stats">' +
         '<span class="glr-panel__additions">+' + additions + '</span> ' +
         '<span class="glr-panel__deletions">−' + deletions + '</span>' +
-        '</span>' +
-        '</li>';
+        '</span>';
+      var span = document.createElement("span");
+      span.innerHTML = labelHtml;
+      li.appendChild(span);
+      ul.appendChild(li);
     });
-    html += '</ul>';
-    body.innerHTML = html;
+    body.appendChild(ul);
     return body;
   }
 
@@ -802,16 +831,22 @@
         }
       });
 
-      filesPromise.then(function (files) {
-        if (unmounted) return;
-        var viewed = api.getViewedFiles ? api.getViewedFiles(mrIid) : new Set();
-        replaceBody(blockEls.files, renderFilesBlock(files, viewed));
-        updateChipValue("files", String((files || []).length));
-      }).catch(function () {
-        if (unmounted) return;
-        replaceBody(blockEls.files, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
-        updateChipValue("files", "⚠");
-      });
+      Promise.all([mrPromise.catch(function () { return null; }), filesPromise])
+        .then(function (results) {
+          if (unmounted) return;
+          var mrForSha = results[0];
+          var files = results[1];
+          var viewed = api.getViewedFiles ? api.getViewedFiles(mrIid) : new Set();
+          replaceBody(blockEls.files, renderFilesBlock(files, viewed, mrForSha || { diff_refs: {} }, {
+            api: api, mrIid: mrIid,
+          }));
+          updateChipValue("files", String((files || []).length));
+        })
+        .catch(function () {
+          if (unmounted) return;
+          replaceBody(blockEls.files, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
+          updateChipValue("files", "⚠");
+        });
     }
 
     fetchAndRender();
