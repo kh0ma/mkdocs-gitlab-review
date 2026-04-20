@@ -17,6 +17,7 @@
     currentFile: null,
     reviewActive: false,
     baseBlocks: null,  // array of text blocks from base version
+    panelHandle: null,
   };
 
   // --- Init ---
@@ -155,6 +156,13 @@
     }).then(function () {
       renderOverlay();
       scrollToHashLine();
+      // Mount right-rail panel.
+      var rail = document.querySelector(".md-sidebar--secondary") || document.body;
+      if (state.panelHandle) state.panelHandle.unmount();
+      state.panelHandle = window.ReviewPanel.mount(rail, {
+        mrIid: state.mrIid,
+        api: window.GitlabAPI,
+      });
     });
   }
 
@@ -164,6 +172,11 @@
     toggleBtn.classList.remove("glr-toolbar-btn--active");
     toggleBtn.querySelector(".glr-toolbar-btn__label").textContent = "Рев'ю";
     toggleBtn.title = "Увімкнути рев'ю";
+
+    if (state.panelHandle) {
+      state.panelHandle.unmount();
+      state.panelHandle = null;
+    }
 
     // Remove all overlay elements
     document.querySelectorAll(".glr-block").forEach(function (el) {

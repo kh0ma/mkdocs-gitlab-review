@@ -179,8 +179,8 @@ class GitLabReviewPlugin(BasePlugin):
                 css = css_path.read_text()
                 parts.append(f"<style>{css}</style>")
 
-        # JS — oauth → api → mentions → main (load order matters; mentions needs api)
-        for js_file in ["oauth.js", "api.js", "mentions.js", "review.js"]:
+        # JS — oauth → api → mentions → panel → main (load order matters)
+        for js_file in ["oauth.js", "api.js", "mentions.js", "panel.js", "review.js"]:
             js_path = self._assets_dir / js_file
             if js_path.exists():
                 js = js_path.read_text()
