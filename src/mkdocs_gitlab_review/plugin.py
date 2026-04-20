@@ -172,11 +172,12 @@ class GitLabReviewPlugin(BasePlugin):
             '<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>'
         )
 
-        # CSS
-        css_path = self._assets_dir / "review.css"
-        if css_path.exists():
-            css = css_path.read_text()
-            parts.append(f"<style>{css}</style>")
+        # CSS — review.css (core) + panel.css (review panel)
+        for css_file in ["review.css", "panel.css"]:
+            css_path = self._assets_dir / css_file
+            if css_path.exists():
+                css = css_path.read_text()
+                parts.append(f"<style>{css}</style>")
 
         # JS — oauth → api → mentions → main (load order matters; mentions needs api)
         for js_file in ["oauth.js", "api.js", "mentions.js", "review.js"]:
