@@ -1231,16 +1231,16 @@
     var nodesToReplace = [];
     var node;
     while ((node = walker.nextNode())) {
-      if (/@\w+/.test(node.nodeValue)) {
+      if (/@[\p{L}\p{N}_.\-]+/u.test(node.nodeValue)) {
         nodesToReplace.push(node);
       }
     }
     nodesToReplace.forEach(function (textNode) {
-      var parts = textNode.nodeValue.split(/(@\w+)/g);
+      var parts = textNode.nodeValue.split(/(@[\p{L}\p{N}_.\-]+)/gu);
       if (parts.length <= 1) return;
       var frag = document.createDocumentFragment();
       parts.forEach(function (part) {
-        if (/^@\w+$/.test(part)) {
+        if (/^@[\p{L}\p{N}_.\-]+$/u.test(part)) {
           var chip = document.createElement("span");
           chip.className = "glr-mention";
           chip.textContent = part;

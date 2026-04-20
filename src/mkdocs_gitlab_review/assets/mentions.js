@@ -113,7 +113,7 @@
         btn.setAttribute("role", "option");
         btn.dataset.username = m.username;
         var avatar = m.avatar_url
-          ? '<img class="glr-mention-item__avatar" src="' + m.avatar_url + '" alt="">'
+          ? '<img class="glr-mention-item__avatar" src="' + escapeHtml(m.avatar_url) + '" alt="">'
           : '<span class="glr-mention-item__avatar glr-mention-item__avatar--placeholder" aria-hidden="true"></span>';
         btn.innerHTML =
           avatar +

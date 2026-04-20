@@ -706,6 +706,8 @@
 
     var unmounted = false;
     var sheetEl = null;
+    var sheetSourceEl = null;
+    var sheetSourceParent = null;
 
     function updateChipValue(key, text) {
       if (!chipEls[key]) return;
@@ -724,9 +726,11 @@
       sheet.className = "glr-panel__sheet glr-panel__sheet--" + key;
       sheet.innerHTML = '<button type="button" class="glr-panel__sheet-close" aria-label="Закрити">×</button>' +
         '<div class="glr-panel__sheet-body"></div>';
-      var body = source.cloneNode(true);
-      body.style.display = "";
-      sheet.querySelector(".glr-panel__sheet-body").appendChild(body);
+      // Move the LIVE block (preserving event listeners) into the sheet.
+      sheetSourceEl = source;
+      sheetSourceParent = source.parentNode;
+      source.style.display = "";
+      sheet.querySelector(".glr-panel__sheet-body").appendChild(source);
       document.body.appendChild(sheet);
       sheet.addEventListener("keydown", function (e) {
         if (e.key === "Escape") closeSheet();
@@ -745,8 +749,15 @@
         if (typeof sheetEl.close === "function") {
           try { sheetEl.close(); } catch (e) { /* noop */ }
         }
+        // Move the live block back to its original parent (hidden).
+        if (sheetSourceEl && sheetSourceParent) {
+          sheetSourceEl.style.display = "none";
+          sheetSourceParent.appendChild(sheetSourceEl);
+        }
         if (sheetEl.parentNode) sheetEl.parentNode.removeChild(sheetEl);
         sheetEl = null;
+        sheetSourceEl = null;
+        sheetSourceParent = null;
       }
     }
 
