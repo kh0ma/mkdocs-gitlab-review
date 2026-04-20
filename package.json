@@ -1,0 +1,14 @@
+{
+  "name": "mkdocs-gitlab-review-tests",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JS test harness for mkdocs-gitlab-review plugin (dev-only; not published)",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0",
+    "happy-dom": "^14.12.0"
+  }
+}
