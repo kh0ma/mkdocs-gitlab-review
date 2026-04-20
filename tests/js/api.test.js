@@ -217,4 +217,11 @@ describe("GitlabAPI", () => {
     const status = await window.GitlabAPI.getPipelineStatus(7);
     expect(status).toEqual({ status: null, web_url: null });
   });
+
+  it("getCurrentUser GETs /user", async () => {
+    fetchMock.mockResolvedValueOnce({ id: 9, username: "me", name: "Me" });
+    const u = await window.GitlabAPI.getCurrentUser();
+    expect(fetchMock).toHaveBeenCalledWith("/user");
+    expect(u.username).toBe("me");
+  });
 });

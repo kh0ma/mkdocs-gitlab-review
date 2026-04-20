@@ -156,13 +156,24 @@
     }).then(function () {
       renderOverlay();
       scrollToHashLine();
-      // Mount right-rail panel.
+      // Mount right-rail panel with current user (for Approve button authentication).
       var rail = document.querySelector(".md-sidebar--secondary") || document.body;
       if (state.panelHandle) state.panelHandle.unmount();
-      state.panelHandle = window.ReviewPanel.mount(rail, {
-        mrIid: state.mrIid,
-        api: window.GitlabAPI,
-      });
+      window.GitlabAPI.getCurrentUser()
+        .then(function (user) {
+          state.panelHandle = window.ReviewPanel.mount(rail, {
+            mrIid: state.mrIid,
+            api: window.GitlabAPI,
+            currentUser: user,
+          });
+        })
+        .catch(function () {
+          // No user → mount in read-only mode (buttons link to GitLab).
+          state.panelHandle = window.ReviewPanel.mount(rail, {
+            mrIid: state.mrIid,
+            api: window.GitlabAPI,
+          });
+        });
     });
   }
 

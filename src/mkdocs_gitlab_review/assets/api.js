@@ -200,6 +200,10 @@
         };
       });
     },
+
+    getCurrentUser: function () {
+      return apiFetch("/user");
+    },
   };
 
   window.GitlabAPI = GitlabAPI;
