@@ -101,6 +101,77 @@
     });
   }
 
+  // -------- Member search popover --------
+
+  function openMemberPopover(anchor, opts) {
+    // opts: {api, onSelect(user)}
+    var existing = document.querySelector(".glr-panel__member-popover");
+    if (existing) existing.remove();
+
+    var pop = document.createElement("div");
+    pop.className = "glr-panel__member-popover";
+    pop.innerHTML =
+      '<input type="text" class="glr-panel__member-popover__input" placeholder="Пошук користувача…" />' +
+      '<ul class="glr-panel__member-popover__list" role="listbox"></ul>';
+    document.body.appendChild(pop);
+    var rect = anchor.getBoundingClientRect();
+    pop.style.position = "absolute";
+    pop.style.left = (rect.left + window.scrollX) + "px";
+    pop.style.top = (rect.bottom + window.scrollY + 4) + "px";
+
+    var input = pop.querySelector(".glr-panel__member-popover__input");
+    var list = pop.querySelector(".glr-panel__member-popover__list");
+    var timer = null;
+    var sequence = 0;
+
+    function render(members) {
+      list.innerHTML = "";
+      members.forEach(function (m) {
+        var li = document.createElement("li");
+        li.className = "glr-panel__member-popover__item";
+        li.dataset.userId = m.id;
+        var avatar = m.avatar_url
+          ? '<img class="glr-panel__avatar" src="' + escapeHtml(m.avatar_url) + '" alt="">'
+          : '<span class="glr-panel__avatar glr-panel__avatar--placeholder"></span>';
+        li.innerHTML = avatar +
+          '<span class="glr-panel__member-popover__name">' + escapeHtml(m.name || m.username) + '</span>' +
+          '<span class="glr-panel__member-popover__username">@' + escapeHtml(m.username) + '</span>';
+        li.addEventListener("click", function () {
+          opts.onSelect(m);
+          close();
+        });
+        list.appendChild(li);
+      });
+    }
+
+    input.addEventListener("input", function () {
+      var query = input.value;
+      clearTimeout(timer);
+      var mySeq = ++sequence;
+      timer = setTimeout(function () {
+        opts.api.searchMembers(query, { perPage: 10 }).then(function (members) {
+          if (mySeq !== sequence) return;
+          render(members || []);
+        }).catch(function () {
+          if (mySeq !== sequence) return;
+          render([]);
+        });
+      }, 200);
+    });
+
+    function onOutsideClick(e) {
+      if (!pop.contains(e.target) && e.target !== anchor) close();
+    }
+    function close() {
+      document.removeEventListener("click", onOutsideClick);
+      if (pop.parentNode) pop.parentNode.removeChild(pop);
+    }
+    setTimeout(function () {
+      document.addEventListener("click", onOutsideClick);
+    }, 0);
+    input.focus();
+  }
+
   function mrWebUrl(mrIid) {
     return (config.project_url || config.gitlab_url || "") +
       "/-/merge_requests/" + mrIid;
@@ -150,23 +221,69 @@
     body.className = "glr-panel__block-body";
     if (!mr.reviewers || mr.reviewers.length === 0) {
       body.innerHTML = '<p class="glr-panel__empty">Рецензентів не призначено</p>';
-      return body;
+    } else {
+      var approvedUsernames = new Set(
+        (ctx && ctx.approvals && ctx.approvals.approved_by || []).map(function (u) { return u.username; })
+      );
+      var list = document.createElement("ul");
+      list.className = "glr-panel__user-list";
+      mr.reviewers.forEach(function (r) {
+        var status = approvedUsernames.has(r.username) ? "approved" : "requested";
+        var statusLabel = status === "approved" ? "✓ approved" : "⏳ requested";
+        var li = document.createElement("li");
+        li.className = "glr-panel__user-row glr-panel__user-row--" + status;
+        var chipHtml = '<span class="glr-panel__user">' +
+          (r.avatar_url
+            ? '<img class="glr-panel__avatar" src="' + escapeHtml(r.avatar_url) + '" alt="">'
+            : '<span class="glr-panel__avatar glr-panel__avatar--placeholder"></span>') +
+          (r.name ? '<span class="glr-panel__user-name">' + escapeHtml(r.name) + '</span>' : '') +
+          '<span class="glr-panel__user-username">@' + escapeHtml(r.username) + '</span>' +
+          '</span>';
+        li.innerHTML = chipHtml +
+          ' <span class="glr-panel__user-status">' + statusLabel + '</span>';
+        if (ctx && ctx.api) {
+          var rmBtn = document.createElement("button");
+          rmBtn.type = "button";
+          rmBtn.className = "glr-panel__user-remove";
+          rmBtn.setAttribute("aria-label", "Видалити " + (r.name || r.username));
+          rmBtn.textContent = "×";
+          rmBtn.addEventListener("click", function () {
+            var remaining = mr.reviewers.filter(function (u) { return u.id !== r.id; }).map(function (u) { return u.id; });
+            ctx.api.setReviewers(ctx.mrIid, remaining).then(function () {
+              if (ctx.onChange) ctx.onChange();
+            }).catch(function (err) {
+              showToast("Remove failed: " + (err && err.message || "помилка"), "error");
+            });
+          });
+          li.appendChild(rmBtn);
+        }
+        list.appendChild(li);
+      });
+      body.appendChild(list);
     }
-    var approvedUsernames = new Set(
-      (ctx.approvals && ctx.approvals.approved_by || []).map(function (u) { return u.username; })
-    );
-    var html = '<ul class="glr-panel__user-list">';
-    mr.reviewers.forEach(function (r) {
-      var status = approvedUsernames.has(r.username) ? "approved" : "requested";
-      var statusLabel = status === "approved" ? "✓ approved" : "⏳ requested";
-      html += '<li class="glr-panel__user-row glr-panel__user-row--' + status + '">' +
-        userChip(r) +
-        ' <span class="glr-panel__user-status">' + statusLabel + '</span>' +
-        '</li>';
-    });
-    html += '</ul>';
-    html += '<a class="glr-panel__action-link" href="' + mrWebUrl(mr.iid) + '">+ Запросити рев\'ю в GitLab</a>';
-    body.innerHTML = html;
+
+    if (ctx && ctx.api) {
+      var addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "glr-panel__add-user glr-panel__action-link";
+      addBtn.textContent = "+ Запросити рев'ю";
+      addBtn.addEventListener("click", function () {
+        openMemberPopover(addBtn, {
+          api: ctx.api,
+          onSelect: function (user) {
+            var ids = (mr.reviewers || []).map(function (u) { return u.id; });
+            if (ids.indexOf(user.id) >= 0) return;
+            ids.push(user.id);
+            ctx.api.setReviewers(ctx.mrIid, ids).then(function () {
+              if (ctx.onChange) ctx.onChange();
+            }).catch(function (err) {
+              showToast("Add failed: " + (err && err.message || "помилка"), "error");
+            });
+          },
+        });
+      });
+      body.appendChild(addBtn);
+    }
     return body;
   }
 
@@ -267,19 +384,67 @@
     return body;
   }
 
-  function renderAssigneesBlock(mr) {
+  function renderAssigneesBlock(mr, ctx) {
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
     if (!mr.assignees || mr.assignees.length === 0) {
       body.innerHTML = '<p class="glr-panel__empty">Не призначено</p>';
-      return body;
+    } else {
+      var list = document.createElement("ul");
+      list.className = "glr-panel__user-list";
+      mr.assignees.forEach(function (a) {
+        var li = document.createElement("li");
+        li.className = "glr-panel__user-row";
+        li.innerHTML = '<span class="glr-panel__user">' +
+          (a.avatar_url
+            ? '<img class="glr-panel__avatar" src="' + escapeHtml(a.avatar_url) + '" alt="">'
+            : '<span class="glr-panel__avatar glr-panel__avatar--placeholder"></span>') +
+          (a.name ? '<span class="glr-panel__user-name">' + escapeHtml(a.name) + '</span>' : '') +
+          '<span class="glr-panel__user-username">@' + escapeHtml(a.username) + '</span>' +
+          '</span>';
+        if (ctx && ctx.api) {
+          var rmBtn = document.createElement("button");
+          rmBtn.type = "button";
+          rmBtn.className = "glr-panel__user-remove";
+          rmBtn.textContent = "×";
+          rmBtn.setAttribute("aria-label", "Видалити " + (a.name || a.username));
+          rmBtn.addEventListener("click", function () {
+            var remaining = mr.assignees.filter(function (u) { return u.id !== a.id; }).map(function (u) { return u.id; });
+            ctx.api.setAssignees(ctx.mrIid, remaining).then(function () {
+              if (ctx.onChange) ctx.onChange();
+            }).catch(function (err) {
+              showToast("Remove failed: " + (err && err.message || "помилка"), "error");
+            });
+          });
+          li.appendChild(rmBtn);
+        }
+        list.appendChild(li);
+      });
+      body.appendChild(list);
     }
-    var html = '<ul class="glr-panel__user-list">';
-    mr.assignees.forEach(function (a) {
-      html += '<li class="glr-panel__user-row">' + userChip(a) + '</li>';
-    });
-    html += '</ul>';
-    body.innerHTML = html;
+
+    if (ctx && ctx.api) {
+      var addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "glr-panel__add-user glr-panel__action-link";
+      addBtn.textContent = "+ Призначити";
+      addBtn.addEventListener("click", function () {
+        openMemberPopover(addBtn, {
+          api: ctx.api,
+          onSelect: function (user) {
+            var ids = (mr.assignees || []).map(function (u) { return u.id; });
+            if (ids.indexOf(user.id) >= 0) return;
+            ids.push(user.id);
+            ctx.api.setAssignees(ctx.mrIid, ids).then(function () {
+              if (ctx.onChange) ctx.onChange();
+            }).catch(function (err) {
+              showToast("Add failed: " + (err && err.message || "помилка"), "error");
+            });
+          },
+        });
+      });
+      body.appendChild(addBtn);
+    }
     return body;
   }
 
@@ -582,7 +747,12 @@
           replaceBody(blockEls.reviewers, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
           updateChipValue("reviewers", "⚠");
         } else {
-          replaceBody(blockEls.reviewers, renderReviewersBlock(mr, { approvals: approvals.__error ? null : approvals }));
+          replaceBody(blockEls.reviewers, renderReviewersBlock(mr, {
+            api: api,
+            mrIid: mrIid,
+            approvals: approvals.__error ? null : approvals,
+            onChange: function () { fetchAndRender(); if (opts.onChange) opts.onChange(); },
+          }));
           updateChipValue("reviewers", String((mr.reviewers || []).length));
         }
         if (approvals.__error) {
@@ -610,7 +780,11 @@
           replaceBody(blockEls.assignees, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
           updateChipValue("assignees", "⚠");
         } else {
-          replaceBody(blockEls.assignees, renderAssigneesBlock(mr));
+          replaceBody(blockEls.assignees, renderAssigneesBlock(mr, {
+            api: api,
+            mrIid: mrIid,
+            onChange: function () { fetchAndRender(); if (opts.onChange) opts.onChange(); },
+          }));
           updateChipValue("assignees", String((mr.assignees || []).length));
         }
         if (mr.__error) {

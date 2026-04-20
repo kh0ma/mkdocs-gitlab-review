@@ -290,3 +290,78 @@ describe("ReviewPanel — Approve interactivity", () => {
     expect(document.querySelector(".glr-toast--error")).not.toBeNull();
   });
 });
+
+describe("ReviewPanel — Reviewers/Assignees interactivity", () => {
+  let container, api;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="mount"></div>';
+    container = document.getElementById("mount");
+    api = {
+      getMR: vi.fn().mockResolvedValue({
+        iid: 7, state: "opened",
+        reviewers: [{ id: 1, username: "andriy", name: "Andriy" }],
+        assignees: [],
+        source_branch: "feat/x",
+      }),
+      getChangedFiles: vi.fn().mockResolvedValue([]),
+      getApprovalState: vi.fn().mockResolvedValue({ required: 0, approved_by: [], rules: [] }),
+      getPipelineStatus: vi.fn().mockResolvedValue({ status: null, web_url: null }),
+      getViewedFiles: vi.fn().mockReturnValue(new Set()),
+      searchMembers: vi.fn().mockResolvedValue([
+        { id: 2, username: "maria", name: "Maria" },
+      ]),
+      setReviewers: vi.fn().mockResolvedValue({}),
+      setAssignees: vi.fn().mockResolvedValue({}),
+    };
+    window.__GITLAB_REVIEW__ = { gitlab_url: "https://g", project_id: "42" };
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn() });
+    loadAsset("src/mkdocs_gitlab_review/assets/panel.js");
+  });
+
+  it("reviewer × button calls setReviewers without that user", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 20));
+    const removeBtn = container.querySelector('[data-block="reviewers"] .glr-panel__user-remove');
+    expect(removeBtn).not.toBeNull();
+    removeBtn.click();
+    await new Promise(r => setTimeout(r, 20));
+    expect(api.setReviewers).toHaveBeenCalledWith(7, []);
+  });
+
+  it("add-reviewer button opens member search popover", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 20));
+    const addBtn = container.querySelector('[data-block="reviewers"] .glr-panel__add-user');
+    expect(addBtn).not.toBeNull();
+    addBtn.click();
+    await new Promise(r => setTimeout(r, 10));
+    expect(document.querySelector(".glr-panel__member-popover")).not.toBeNull();
+  });
+
+  it("typing in search popover filters member list", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 20));
+    container.querySelector('[data-block="reviewers"] .glr-panel__add-user').click();
+    const input = document.querySelector(".glr-panel__member-popover__input");
+    input.value = "ma";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await new Promise(r => setTimeout(r, 250));
+    expect(api.searchMembers).toHaveBeenCalledWith("ma", expect.anything());
+  });
+
+  it("click on member in popover calls setReviewers with merged IDs", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 20));
+    container.querySelector('[data-block="reviewers"] .glr-panel__add-user').click();
+    const input = document.querySelector(".glr-panel__member-popover__input");
+    input.value = "ma";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    await new Promise(r => setTimeout(r, 250));
+    const item = document.querySelector(".glr-panel__member-popover__item");
+    item.click();
+    await new Promise(r => setTimeout(r, 20));
+    // Current reviewers: [andriy(1)]; adding maria(2) → [1, 2]
+    expect(api.setReviewers).toHaveBeenCalledWith(7, [1, 2]);
+  });
+});

@@ -324,3 +324,58 @@
 }
 
 .glr-confirm--danger .glr-confirm__ok { background: #cf222e; }
+
+.glr-panel__user-remove {
+  margin-left: auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.glr-panel__user-remove:hover { background: rgba(207, 34, 46, 0.12); color: #cf222e; }
+
+.glr-panel__add-user { width: 100%; text-align: center; }
+
+.glr-panel__member-popover {
+  z-index: 10500;
+  width: 18rem;
+  background: var(--md-default-bg-color, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.375rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 0.4rem;
+}
+
+.glr-panel__member-popover__input {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.3rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 0.25rem;
+  font: inherit;
+}
+
+.glr-panel__member-popover__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.glr-panel__member-popover__item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.glr-panel__member-popover__item:hover { background: rgba(13, 115, 119, 0.1); }
+.glr-panel__member-popover__username { margin-left: auto; color: rgba(0, 0, 0, 0.5); font-size: 0.78rem; }
