@@ -142,14 +142,12 @@ describe("ReviewPanel — data fetching", () => {
     expect(block.textContent).toContain("olek");
   });
 
-  it("actions block shows merge/close links (read-only MR#2)", async () => {
+  it("actions block shows merge/close buttons on opened MR", async () => {
     window.ReviewPanel.mount(container, { mrIid: 7, api });
     await new Promise(r => setTimeout(r, 10));
     const block = container.querySelector('[data-block="actions"]');
-    const links = block.querySelectorAll("a[href]");
-    expect(links.length).toBeGreaterThanOrEqual(1);
-    // Link goes to GitLab UI for MR
-    expect(Array.from(links).some(a => a.href.includes("/merge_requests/7"))).toBe(true);
+    expect(block.querySelector("button.glr-panel__merge-btn")).not.toBeNull();
+    expect(block.querySelector("button.glr-panel__close-btn")).not.toBeNull();
   });
 
   it("skeleton is replaced by content after fetch resolves", async () => {

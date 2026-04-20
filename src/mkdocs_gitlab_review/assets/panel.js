@@ -283,22 +283,132 @@
     return body;
   }
 
-  function renderActionsBlock(mr) {
+  function renderActionsBlock(mr, ctx) {
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
-    var url = mrWebUrl(mr.iid);
-    var html = '';
+
     if (mr.state === "opened") {
-      html += '<a class="glr-panel__action-link glr-panel__action-link--primary" href="' + url + '">Merge in GitLab</a>';
-      html += '<a class="glr-panel__action-link" href="' + url + '">Close in GitLab</a>';
+      // Merge button — enable only when: pipeline passing + approvals met + no conflicts
+      var mergeBtn = document.createElement("button");
+      mergeBtn.type = "button";
+      mergeBtn.className = "glr-panel__merge-btn glr-panel__action-link--primary";
+      mergeBtn.textContent = "Merge MR";
+
+      var disabledReasons = [];
+      if (mr.has_conflicts) disabledReasons.push("Merge conflicts");
+      if (ctx && ctx.pipelineStatus && ctx.pipelineStatus.status &&
+          ctx.pipelineStatus.status !== "success" &&
+          ctx.pipelineStatus.status !== "manual" &&
+          ctx.pipelineStatus.status !== "skipped") {
+        disabledReasons.push("Pipeline not passing (" + ctx.pipelineStatus.status + ")");
+      }
+      if (ctx && ctx.approvals &&
+          (ctx.approvals.approved_by || []).length < (ctx.approvals.required || 0)) {
+        disabledReasons.push("Approvals not met");
+      }
+      if (disabledReasons.length > 0) {
+        mergeBtn.disabled = true;
+        mergeBtn.title = disabledReasons.join("; ");
+      }
+      mergeBtn.addEventListener("click", function () {
+        if (mergeBtn.disabled) return;
+        confirmDialog({
+          title: "Підтвердіть merge",
+          body: "Об'єднати " + mr.source_branch + " → " + (mr.target_branch || "target") + "?",
+          confirmLabel: "Merge",
+          cancelLabel: "Скасувати",
+          extraFields: [
+            { name: "delete_source_branch", type: "checkbox", label: "Видалити source branch після merge", default: true },
+          ],
+        }).then(function (result) {
+          if (!result) return;
+          mergeBtn.disabled = true;
+          mergeBtn.textContent = "Merging…";
+          ctx.api.mergeMR(ctx.mrIid, {
+            sha: mr.diff_refs && mr.diff_refs.head_sha,
+            shouldRemoveSourceBranch: !!result.delete_source_branch,
+          }).then(function () {
+            showToast("MR замерджено", "success");
+            if (ctx.onChange) ctx.onChange();
+          }).catch(function (err) {
+            mergeBtn.disabled = false;
+            mergeBtn.textContent = "Merge MR";
+            showToast("Merge failed: " + (err && err.message || "помилка"), "error");
+          });
+        });
+      });
+      body.appendChild(mergeBtn);
+
+      var closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "glr-panel__close-btn glr-panel__action-link";
+      closeBtn.textContent = "Close MR";
+      closeBtn.addEventListener("click", function () {
+        confirmDialog({
+          title: "Закрити MR?",
+          body: "Закриття MR без merge. Можна буде переобрати у GitLab.",
+          confirmLabel: "Закрити",
+          danger: true,
+        }).then(function (result) {
+          if (!result) return;
+          closeBtn.disabled = true;
+          closeBtn.textContent = "Closing…";
+          ctx.api.closeMR(ctx.mrIid).then(function () {
+            showToast("MR закрито", "success");
+            if (ctx.onChange) ctx.onChange();
+          }).catch(function (err) {
+            closeBtn.disabled = false;
+            closeBtn.textContent = "Close MR";
+            showToast("Close failed: " + (err && err.message || "помилка"), "error");
+          });
+        });
+      });
+      body.appendChild(closeBtn);
     } else if (mr.state === "merged") {
-      html += '<p class="glr-panel__state-badge glr-panel__state-badge--merged">Merged</p>';
-      html += '<a class="glr-panel__action-link" href="' + url + '">Delete source branch in GitLab</a>';
+      var mergedBadge = document.createElement("p");
+      mergedBadge.className = "glr-panel__state-badge glr-panel__state-badge--merged";
+      mergedBadge.textContent = "Merged";
+      body.appendChild(mergedBadge);
+
+      if (mr.source_branch) {
+        var delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "glr-panel__delete-branch-btn glr-panel__action-link";
+        delBtn.textContent = "Видалити source branch (" + mr.source_branch + ")";
+        delBtn.addEventListener("click", function () {
+          confirmDialog({
+            title: "Видалити source branch?",
+            body: "Галка '" + mr.source_branch + "' буде видалена з origin. Дію неможливо відмінити.",
+            confirmLabel: "Видалити",
+            danger: true,
+          }).then(function (result) {
+            if (!result) return;
+            delBtn.disabled = true;
+            delBtn.textContent = "Видалення…";
+            ctx.api.deleteSourceBranch(mr.source_branch).then(function () {
+              showToast("Branch видалено", "success");
+              delBtn.remove();
+            }).catch(function (err) {
+              delBtn.disabled = false;
+              delBtn.textContent = "Видалити source branch (" + mr.source_branch + ")";
+              showToast("Delete failed: " + (err && err.message || "помилка"), "error");
+            });
+          });
+        });
+        body.appendChild(delBtn);
+      }
     } else if (mr.state === "closed") {
-      html += '<p class="glr-panel__state-badge glr-panel__state-badge--closed">Closed</p>';
-      html += '<a class="glr-panel__action-link" href="' + url + '">Open in GitLab</a>';
+      var closedBadge = document.createElement("p");
+      closedBadge.className = "glr-panel__state-badge glr-panel__state-badge--closed";
+      closedBadge.textContent = "Closed";
+      body.appendChild(closedBadge);
+
+      var openLink = document.createElement("a");
+      openLink.className = "glr-panel__action-link";
+      openLink.href = mrWebUrl(mr.iid);
+      openLink.textContent = "Open in GitLab";
+      body.appendChild(openLink);
     }
-    body.innerHTML = html;
     return body;
   }
 
@@ -444,14 +554,17 @@
       var mrPromise = api.getMR(mrIid);
       var approvalsPromise = api.getApprovalState(mrIid);
       var filesPromise = api.getChangedFiles(mrIid);
+      var pipelinePromise = api.getPipelineStatus ? api.getPipelineStatus(mrIid) : Promise.resolve({ status: null, web_url: null });
 
       Promise.all([
         mrPromise.catch(function (e) { return { __error: e }; }),
         approvalsPromise.catch(function (e) { return { __error: e }; }),
+        pipelinePromise.catch(function () { return { status: null, web_url: null }; }),
       ]).then(function (results) {
         if (unmounted) return;
         var mr = results[0];
         var approvals = results[1];
+        var pipeline = results[2];
 
         if (mr.__error) {
           replaceBody(blockEls.reviewers, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
@@ -492,7 +605,13 @@
           replaceBody(blockEls.actions, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
           updateChipValue("actions", "⚠");
         } else {
-          replaceBody(blockEls.actions, renderActionsBlock(mr));
+          replaceBody(blockEls.actions, renderActionsBlock(mr, {
+            api: api,
+            mrIid: mrIid,
+            approvals: approvals.__error ? null : approvals,
+            pipelineStatus: pipeline,
+            onChange: function () { fetchAndRender(); if (opts.onChange) opts.onChange(); },
+          }));
           updateChipValue("actions", mr.state === "opened" ? "●" : mr.state);
         }
       });
