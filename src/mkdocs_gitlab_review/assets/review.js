@@ -240,9 +240,7 @@
   // --- API calls ---
 
   function fetchDiffRefs() {
-    return OAuth.apiFetch(
-      "/projects/" + config.project_id + "/merge_requests/" + state.mrIid
-    ).then(function (mr) {
+    return window.GitlabAPI.getMR(state.mrIid).then(function (mr) {
       if (mr.diff_refs) {
         state.diffRefs = mr.diff_refs;
       }
@@ -279,15 +277,15 @@
   }
 
   function fetchDiscussions() {
-    var basePath = "/projects/" + config.project_id + "/merge_requests/" + state.mrIid + "/discussions";
     state.discussions = [];
 
     function fetchPage(page) {
-      return OAuth.apiFetch(basePath + "?per_page=100&page=" + page)
+      return window.GitlabAPI.getDiscussions(state.mrIid, { page: page })
         .then(function (discussions) {
           if (!discussions || !discussions.length) return;
           state.discussions = state.discussions.concat(discussions);
-          if (discussions.length === 100) {
+          // GitLab default per_page is 20; keep fetching while full pages come back.
+          if (discussions.length === 20) {
             return fetchPage(page + 1);
           }
         });
