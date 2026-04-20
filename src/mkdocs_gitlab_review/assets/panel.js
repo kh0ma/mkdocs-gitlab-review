@@ -312,6 +312,7 @@
       }
       mergeBtn.addEventListener("click", function () {
         if (mergeBtn.disabled) return;
+        mergeBtn.disabled = true;
         confirmDialog({
           title: "Підтвердіть merge",
           body: "Об'єднати " + mr.source_branch + " → " + (mr.target_branch || "target") + "?",
@@ -321,8 +322,10 @@
             { name: "delete_source_branch", type: "checkbox", label: "Видалити source branch після merge", default: true },
           ],
         }).then(function (result) {
-          if (!result) return;
-          mergeBtn.disabled = true;
+          if (!result) {
+            mergeBtn.disabled = false;
+            return;
+          }
           mergeBtn.textContent = "Merging…";
           ctx.api.mergeMR(ctx.mrIid, {
             sha: mr.diff_refs && mr.diff_refs.head_sha,
@@ -344,14 +347,18 @@
       closeBtn.className = "glr-panel__close-btn glr-panel__action-link";
       closeBtn.textContent = "Close MR";
       closeBtn.addEventListener("click", function () {
+        if (closeBtn.disabled) return;
+        closeBtn.disabled = true;
         confirmDialog({
           title: "Закрити MR?",
           body: "Закриття MR без merge. Можна буде переобрати у GitLab.",
           confirmLabel: "Закрити",
           danger: true,
         }).then(function (result) {
-          if (!result) return;
-          closeBtn.disabled = true;
+          if (!result) {
+            closeBtn.disabled = false;
+            return;
+          }
           closeBtn.textContent = "Closing…";
           ctx.api.closeMR(ctx.mrIid).then(function () {
             showToast("MR закрито", "success");
@@ -376,18 +383,23 @@
         delBtn.className = "glr-panel__delete-branch-btn glr-panel__action-link";
         delBtn.textContent = "Видалити source branch (" + mr.source_branch + ")";
         delBtn.addEventListener("click", function () {
+          if (delBtn.disabled) return;
+          delBtn.disabled = true;
           confirmDialog({
             title: "Видалити source branch?",
-            body: "Галка '" + mr.source_branch + "' буде видалена з origin. Дію неможливо відмінити.",
+            body: "Гілка '" + mr.source_branch + "' буде видалена з origin. Дію неможливо відмінити.",
             confirmLabel: "Видалити",
             danger: true,
           }).then(function (result) {
-            if (!result) return;
-            delBtn.disabled = true;
+            if (!result) {
+              delBtn.disabled = false;
+              return;
+            }
             delBtn.textContent = "Видалення…";
             ctx.api.deleteSourceBranch(mr.source_branch).then(function () {
               showToast("Branch видалено", "success");
               delBtn.remove();
+              if (ctx.onChange) ctx.onChange();
             }).catch(function (err) {
               delBtn.disabled = false;
               delBtn.textContent = "Видалити source branch (" + mr.source_branch + ")";
