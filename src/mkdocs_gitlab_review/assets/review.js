@@ -930,14 +930,13 @@
       }, true);
 
       // --- @mention autocomplete (delegated to MentionAutocomplete module) ---
-      var mentionHandle = window.MentionAutocomplete.attach(quill, {
+      window.MentionAutocomplete.attach(quill, {
         container: editorContainer,
         searchMembers: function (query, opts) {
           return window.GitlabAPI.searchMembers(query, opts);
         },
       });
-      // Detach when editor is destroyed (tied to the wrapper's lifecycle below).
-      wrapper.addEventListener("remove", function () { mentionHandle.detach(); });
+      // TODO: call returned detach() when editor lifecycle/teardown is formalized.
     }, 0);
 
     return {
