@@ -72,3 +72,102 @@ describe("ReviewPanel — mount/unmount lifecycle", () => {
     expect(() => handle.unmount()).not.toThrow();
   });
 });
+
+describe("ReviewPanel — data fetching", () => {
+  let container;
+  let api;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="mount"></div>';
+    container = document.getElementById("mount");
+    api = {
+      getMR: vi.fn().mockResolvedValue({
+        iid: 7,
+        reviewers: [{ id: 1, username: "andriy", name: "Andriy", avatar_url: null }],
+        assignees: [{ id: 2, username: "olek", name: "Olek", avatar_url: null }],
+        source_branch: "feat/x",
+        target_branch: "main",
+        state: "opened",
+        web_url: "https://git.example.com/g/p/-/merge_requests/7",
+        has_conflicts: false,
+      }),
+      getChangedFiles: vi.fn().mockResolvedValue([
+        { path: "a.md", status: "modified", additions: 5, deletions: 2 },
+      ]),
+      getApprovalState: vi.fn().mockResolvedValue({
+        required: 2,
+        approved_by: [{ username: "maria", name: "Maria" }],
+        rules: [{ id: 1, name: "CODEOWNERS", approvals_required: 1, approved_by: [] }],
+      }),
+      getViewedFiles: vi.fn().mockReturnValue(new Set()),
+    };
+    window.__GITLAB_REVIEW__ = { gitlab_url: "https://git.example.com", project_id: "42" };
+    loadAsset("src/mkdocs_gitlab_review/assets/panel.js");
+  });
+
+  it("fires fetches in parallel on mount", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    expect(api.getMR).toHaveBeenCalledTimes(1);
+    expect(api.getApprovalState).toHaveBeenCalledTimes(1);
+    expect(api.getChangedFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it("reviewers block renders reviewer list after fetch", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 10));
+    const block = container.querySelector('[data-block="reviewers"]');
+    expect(block.textContent).toContain("andriy");
+  });
+
+  it("approvals block renders 'N of M' counter", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 10));
+    const block = container.querySelector('[data-block="approvals"]');
+    expect(block.textContent).toMatch(/1.*of.*2/i);
+  });
+
+  it("files block renders file list with +/- stats", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 10));
+    const block = container.querySelector('[data-block="files"]');
+    expect(block.textContent).toContain("a.md");
+    expect(block.textContent).toMatch(/\+5/);
+    expect(block.textContent).toMatch(/[-−]2/);
+  });
+
+  it("assignees block renders assignee list", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 10));
+    const block = container.querySelector('[data-block="assignees"]');
+    expect(block.textContent).toContain("olek");
+  });
+
+  it("actions block shows merge/close links (read-only MR#2)", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 10));
+    const block = container.querySelector('[data-block="actions"]');
+    const links = block.querySelectorAll("a[href]");
+    expect(links.length).toBeGreaterThanOrEqual(1);
+    // Link goes to GitLab UI for MR
+    expect(Array.from(links).some(a => a.href.includes("/merge_requests/7"))).toBe(true);
+  });
+
+  it("skeleton is replaced by content after fetch resolves", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    expect(container.querySelectorAll(".glr-panel__skeleton").length).toBe(5);
+    await new Promise(r => setTimeout(r, 10));
+    expect(container.querySelectorAll(".glr-panel__skeleton").length).toBe(0);
+  });
+
+  it("one block error does not break other blocks", async () => {
+    api.getApprovalState = vi.fn().mockRejectedValue({ status: 500, message: "boom" });
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 10));
+    // approvals block shows error state
+    const approvals = container.querySelector('[data-block="approvals"]');
+    expect(approvals.querySelector(".glr-panel__error")).not.toBeNull();
+    // reviewers still rendered normally
+    const reviewers = container.querySelector('[data-block="reviewers"]');
+    expect(reviewers.textContent).toContain("andriy");
+  });
+});
