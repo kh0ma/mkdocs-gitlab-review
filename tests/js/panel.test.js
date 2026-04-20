@@ -171,3 +171,64 @@ describe("ReviewPanel — data fetching", () => {
     expect(reviewers.textContent).toContain("andriy");
   });
 });
+
+describe("ReviewPanel — mobile", () => {
+  let container, api;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="mount"></div>';
+    container = document.getElementById("mount");
+    api = {
+      getMR: vi.fn().mockResolvedValue({ iid: 7, reviewers: [], assignees: [], state: "opened" }),
+      getChangedFiles: vi.fn().mockResolvedValue([]),
+      getApprovalState: vi.fn().mockResolvedValue({ required: 0, approved_by: [], rules: [] }),
+      getViewedFiles: vi.fn().mockReturnValue(new Set()),
+    };
+    window.__GITLAB_REVIEW__ = { gitlab_url: "https://git.example.com", project_id: "42" };
+    // Force mobile breakpoint
+    window.matchMedia = vi.fn().mockImplementation(function (query) {
+      return {
+        matches: query.indexOf("max-width: 768px") >= 0,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      };
+    });
+    loadAsset("src/mkdocs_gitlab_review/assets/panel.js");
+  });
+
+  it("on mobile breakpoint, renders chip bar instead of vertical stack", () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    expect(container.querySelector(".glr-panel--mobile")).not.toBeNull();
+    expect(container.querySelectorAll(".glr-panel__chip").length).toBe(5);
+  });
+
+  it("mobile chips have block-specific keys", () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    const keys = Array.from(container.querySelectorAll(".glr-panel__chip"))
+      .map(c => c.dataset.block);
+    expect(keys).toEqual(
+      expect.arrayContaining(["reviewers", "approvals", "files", "assignees", "actions"])
+    );
+  });
+
+  it("tapping a chip opens a <dialog> with that block's content", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 10));
+    const reviewersChip = container.querySelector('.glr-panel__chip[data-block="reviewers"]');
+    reviewersChip.click();
+    const dlg = document.querySelector(".glr-panel__sheet");
+    expect(dlg).not.toBeNull();
+    expect(dlg.textContent.toLowerCase()).toContain("reviewers");
+  });
+
+  it("Escape closes bottom sheet", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 10));
+    container.querySelector('.glr-panel__chip[data-block="reviewers"]').click();
+    const dlg = document.querySelector(".glr-panel__sheet");
+    dlg.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    // happy-dom may not auto-close <dialog> on Escape; we listen ourselves.
+    expect(document.querySelector(".glr-panel__sheet")).toBeNull();
+  });
+});

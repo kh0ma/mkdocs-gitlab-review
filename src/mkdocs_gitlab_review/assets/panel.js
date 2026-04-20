@@ -230,19 +230,96 @@
     var api = opts.api;
     var mrIid = opts.mrIid;
 
+    var mql = window.matchMedia("(max-width: 768px)");
+    var isMobile = mql.matches;
+
     var panel = document.createElement("aside");
-    panel.className = "glr-panel";
+    panel.className = "glr-panel" + (isMobile ? " glr-panel--mobile" : "");
     panel.setAttribute("aria-label", "Merge Request review panel");
 
     var blockEls = {};
-    BLOCK_DEFS.forEach(function (def) {
-      var el = buildBlockWrapper(def);
-      blockEls[def.key] = el;
-      panel.appendChild(el);
-    });
+    var chipEls = {};
+
+    if (isMobile) {
+      var chipBar = document.createElement("div");
+      chipBar.className = "glr-panel__chip-bar";
+      BLOCK_DEFS.forEach(function (def) {
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "glr-panel__chip glr-panel__chip--" + def.key;
+        chip.dataset.block = def.key;
+        chip.innerHTML = '<span class="glr-panel__chip-label">' + def.title + '</span>' +
+          '<span class="glr-panel__chip-value glr-panel__skeleton-inline"></span>';
+        chipBar.appendChild(chip);
+        chipEls[def.key] = chip;
+        // Hidden block wrapper used as content source for the sheet
+        var hidden = buildBlockWrapper(def);
+        hidden.style.display = "none";
+        panel.appendChild(hidden);
+        blockEls[def.key] = hidden;
+      });
+      panel.insertBefore(chipBar, panel.firstChild);
+    } else {
+      BLOCK_DEFS.forEach(function (def) {
+        var el = buildBlockWrapper(def);
+        blockEls[def.key] = el;
+        panel.appendChild(el);
+      });
+    }
+
     container.appendChild(panel);
 
     var unmounted = false;
+    var sheetEl = null;
+
+    function updateChipValue(key, text) {
+      if (!chipEls[key]) return;
+      var val = chipEls[key].querySelector(".glr-panel__chip-value");
+      if (val) {
+        val.classList.remove("glr-panel__skeleton-inline");
+        val.textContent = text;
+      }
+    }
+
+    function openSheet(key) {
+      closeSheet();
+      var source = blockEls[key];
+      if (!source) return;
+      var sheet = document.createElement("dialog");
+      sheet.className = "glr-panel__sheet glr-panel__sheet--" + key;
+      sheet.innerHTML = '<button type="button" class="glr-panel__sheet-close" aria-label="Закрити">×</button>' +
+        '<div class="glr-panel__sheet-body"></div>';
+      var body = source.cloneNode(true);
+      body.style.display = "";
+      sheet.querySelector(".glr-panel__sheet-body").appendChild(body);
+      document.body.appendChild(sheet);
+      sheet.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeSheet();
+      });
+      sheet.querySelector(".glr-panel__sheet-close").addEventListener("click", closeSheet);
+      if (typeof sheet.showModal === "function") {
+        try { sheet.showModal(); } catch (e) { /* already open */ }
+      } else {
+        sheet.setAttribute("open", "");
+      }
+      sheetEl = sheet;
+    }
+
+    function closeSheet() {
+      if (sheetEl) {
+        if (typeof sheetEl.close === "function") {
+          try { sheetEl.close(); } catch (e) { /* noop */ }
+        }
+        if (sheetEl.parentNode) sheetEl.parentNode.removeChild(sheetEl);
+        sheetEl = null;
+      }
+    }
+
+    if (isMobile) {
+      BLOCK_DEFS.forEach(function (def) {
+        chipEls[def.key].addEventListener("click", function () { openSheet(def.key); });
+      });
+    }
 
     function fetchAndRender() {
       var mrPromise = api.getMR(mrIid);
@@ -259,26 +336,35 @@
 
         if (mr.__error) {
           replaceBody(blockEls.reviewers, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
+          updateChipValue("reviewers", "⚠");
         } else {
           replaceBody(blockEls.reviewers, renderReviewersBlock(mr, { approvals: approvals.__error ? null : approvals }));
+          updateChipValue("reviewers", String((mr.reviewers || []).length));
         }
         if (approvals.__error) {
           replaceBody(blockEls.approvals, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
+          updateChipValue("approvals", "⚠");
         } else if (mr.__error) {
-          // MR fetch failed but approvals succeeded — render approvals with a synthetic MR for the GitLab link
+          // MR fetch failed but approvals succeeded — render with synthetic MR for the GitLab link
           replaceBody(blockEls.approvals, renderApprovalsBlock(approvals, { iid: mrIid }));
+          updateChipValue("approvals", (approvals.approved_by || []).length + "/" + (approvals.required || 0));
         } else {
           replaceBody(blockEls.approvals, renderApprovalsBlock(approvals, mr));
+          updateChipValue("approvals", (approvals.approved_by || []).length + "/" + (approvals.required || 0));
         }
         if (mr.__error) {
           replaceBody(blockEls.assignees, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
+          updateChipValue("assignees", "⚠");
         } else {
           replaceBody(blockEls.assignees, renderAssigneesBlock(mr));
+          updateChipValue("assignees", String((mr.assignees || []).length));
         }
         if (mr.__error) {
           replaceBody(blockEls.actions, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
+          updateChipValue("actions", "⚠");
         } else {
           replaceBody(blockEls.actions, renderActionsBlock(mr));
+          updateChipValue("actions", mr.state === "opened" ? "●" : mr.state);
         }
       });
 
@@ -286,9 +372,11 @@
         if (unmounted) return;
         var viewed = api.getViewedFiles ? api.getViewedFiles(mrIid) : new Set();
         replaceBody(blockEls.files, renderFilesBlock(files, viewed));
+        updateChipValue("files", String((files || []).length));
       }).catch(function () {
         if (unmounted) return;
         replaceBody(blockEls.files, wrapError(makeError("Не вдалося завантажити", fetchAndRender)));
+        updateChipValue("files", "⚠");
       });
     }
 
@@ -297,6 +385,7 @@
     function unmount() {
       if (unmounted) return;
       unmounted = true;
+      closeSheet();
       if (panel.parentNode) panel.parentNode.removeChild(panel);
     }
 
