@@ -123,6 +123,22 @@ describe("GitlabAPI", () => {
     expect(viewed.size).toBe(0);
   });
 
+  it("getDiscussions supports page and perPage params", async () => {
+    fetchMock.mockResolvedValueOnce([]);
+    await window.GitlabAPI.getDiscussions(7, { page: 2, perPage: 100 });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/projects/42/merge_requests/7/discussions?page=2&per_page=100"
+    );
+  });
+
+  it("getDiscussions omits query string when no opts", async () => {
+    fetchMock.mockResolvedValueOnce([]);
+    await window.GitlabAPI.getDiscussions(7);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/projects/42/merge_requests/7/discussions"
+    );
+  });
+
   it("rejects with {status, message, body} shape on HTTP error", async () => {
     fetchMock.mockRejectedValueOnce({ status: 403, message: "Forbidden", body: { error: "x" } });
     await expect(window.GitlabAPI.getMR(7)).rejects.toMatchObject({

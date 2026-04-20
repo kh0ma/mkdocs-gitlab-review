@@ -75,7 +75,11 @@
     },
 
     getDiscussions: function (iid, opts) {
-      var qs = opts && opts.page ? "?page=" + opts.page : "";
+      opts = opts || {};
+      var params = [];
+      if (opts.page) params.push("page=" + opts.page);
+      if (opts.perPage) params.push("per_page=" + opts.perPage);
+      var qs = params.length ? "?" + params.join("&") : "";
       return apiFetch(projectPath("/merge_requests/" + iid + "/discussions" + qs));
     },
 

@@ -280,12 +280,12 @@
     state.discussions = [];
 
     function fetchPage(page) {
-      return window.GitlabAPI.getDiscussions(state.mrIid, { page: page })
+      return window.GitlabAPI.getDiscussions(state.mrIid, { page: page, perPage: 100 })
         .then(function (discussions) {
           if (!discussions || !discussions.length) return;
           state.discussions = state.discussions.concat(discussions);
-          // GitLab default per_page is 20; keep fetching while full pages come back.
-          if (discussions.length === 20) {
+          // Keep fetching while full pages come back.
+          if (discussions.length === 100) {
             return fetchPage(page + 1);
           }
         });
