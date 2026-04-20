@@ -170,17 +170,18 @@
     return body;
   }
 
-  function renderApprovalsBlock(approvals, mr) {
+  function renderApprovalsBlock(approvals, mr, ctx) {
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
-    var approved = (approvals.approved_by || []).length;
-    var required = approvals.required || 0;
+    var approved = (approvals.approved_by || []);
+    var required = Number(approvals.required) || 0;
 
-    var html = '';
+    var html = "";
     if (required === 0 && (!approvals.rules || approvals.rules.length === 0)) {
       html += '<p class="glr-panel__empty">No approval rules configured</p>';
     } else {
-      html += '<p class="glr-panel__approvals-counter"><strong>' + (Number(approved) || 0) + '</strong> of <strong>' + (Number(required) || 0) + '</strong> approvals</p>';
+      html += '<p class="glr-panel__approvals-counter"><strong>' +
+        (Number(approved.length) || 0) + '</strong> of <strong>' + required + '</strong> approvals</p>';
       if (approvals.rules && approvals.rules.length > 0) {
         html += '<ul class="glr-panel__rule-list">';
         approvals.rules.forEach(function (rule) {
@@ -194,8 +195,46 @@
         html += '</ul>';
       }
     }
-    html += '<a class="glr-panel__action-link glr-panel__action-link--primary" href="' + mrWebUrl(mr.iid) + '">Approve in GitLab</a>';
+
     body.innerHTML = html;
+
+    // Interactive Approve / Revoke
+    if (ctx && ctx.api && ctx.currentUser) {
+      var alreadyApproved = approved.some(function (u) {
+        return u.username === ctx.currentUser.username;
+      });
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "glr-panel__approve-btn";
+      btn.textContent = alreadyApproved ? "Revoke approval" : "Approve";
+      if (alreadyApproved) btn.classList.add("glr-panel__approve-btn--approved");
+      btn.addEventListener("click", function () {
+        if (btn.disabled) return;
+        var wasApproved = alreadyApproved;
+        btn.disabled = true;
+        btn.textContent = wasApproved ? "Revoking…" : "Approving…";
+        var call = wasApproved ? ctx.api.revokeApproval(ctx.mrIid) : ctx.api.approve(ctx.mrIid);
+        call
+          .then(function () {
+            showToast(wasApproved ? "Схвалення відкликано" : "Схвалено", "success");
+            if (ctx.onChange) ctx.onChange();
+          })
+          .catch(function (err) {
+            // Rollback
+            btn.disabled = false;
+            btn.textContent = wasApproved ? "Revoke approval" : "Approve";
+            showToast("Не вдалося: " + (err && err.message || "помилка"), "error");
+          });
+      });
+      body.appendChild(btn);
+    } else {
+      // Fallback: link to GitLab (when no currentUser provided)
+      var a = document.createElement("a");
+      a.className = "glr-panel__action-link glr-panel__action-link--primary";
+      a.href = mrWebUrl(mr.iid);
+      a.textContent = "Approve in GitLab";
+      body.appendChild(a);
+    }
     return body;
   }
 
@@ -426,10 +465,20 @@
           updateChipValue("approvals", "⚠");
         } else if (mr.__error) {
           // MR fetch failed but approvals succeeded — render with synthetic MR for the GitLab link
-          replaceBody(blockEls.approvals, renderApprovalsBlock(approvals, { iid: mrIid }));
+          replaceBody(blockEls.approvals, renderApprovalsBlock(approvals, { iid: mrIid }, {
+            api: api,
+            mrIid: mrIid,
+            currentUser: opts.currentUser,
+            onChange: function () { fetchAndRender(); if (opts.onChange) opts.onChange(); },
+          }));
           updateChipValue("approvals", (approvals.approved_by || []).length + "/" + (approvals.required || 0));
         } else {
-          replaceBody(blockEls.approvals, renderApprovalsBlock(approvals, mr));
+          replaceBody(blockEls.approvals, renderApprovalsBlock(approvals, mr, {
+            api: api,
+            mrIid: mrIid,
+            currentUser: opts.currentUser,
+            onChange: function () { fetchAndRender(); if (opts.onChange) opts.onChange(); },
+          }));
           updateChipValue("approvals", (approvals.approved_by || []).length + "/" + (approvals.required || 0));
         }
         if (mr.__error) {

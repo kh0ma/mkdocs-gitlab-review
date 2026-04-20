@@ -232,3 +232,63 @@ describe("ReviewPanel — mobile", () => {
     expect(document.querySelector(".glr-panel__sheet")).toBeNull();
   });
 });
+
+describe("ReviewPanel — Approve interactivity", () => {
+  let container, api;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="mount"></div>';
+    container = document.getElementById("mount");
+    api = {
+      getMR: vi.fn().mockResolvedValue({
+        iid: 7, reviewers: [], assignees: [], state: "opened",
+        web_url: "https://g/p/-/merge_requests/7",
+      }),
+      getChangedFiles: vi.fn().mockResolvedValue([]),
+      getApprovalState: vi.fn()
+        .mockResolvedValueOnce({ required: 2, approved_by: [], rules: [] })
+        .mockResolvedValueOnce({ required: 2, approved_by: [{ username: "me" }], rules: [] }),
+      approve: vi.fn().mockResolvedValue({}),
+      revokeApproval: vi.fn().mockResolvedValue({}),
+      getViewedFiles: vi.fn().mockReturnValue(new Set()),
+      _currentUser: { username: "me" },
+    };
+    window.__GITLAB_REVIEW__ = { gitlab_url: "https://git.example.com", project_id: "42" };
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn() });
+    loadAsset("src/mkdocs_gitlab_review/assets/panel.js");
+  });
+
+  it("Approvals block has a real button when opts.currentUser set", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 10));
+    const block = container.querySelector('[data-block="approvals"]');
+    const btn = block.querySelector("button.glr-panel__approve-btn");
+    expect(btn).not.toBeNull();
+    expect(btn.textContent).toMatch(/approve/i);
+  });
+
+  it("clicking Approve calls api.approve and flips to Revoke on success", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 10));
+    const btn = container.querySelector("button.glr-panel__approve-btn");
+    btn.click();
+    await new Promise(r => setTimeout(r, 20));
+    expect(api.approve).toHaveBeenCalledWith(7);
+    const btnAfter = container.querySelector("button.glr-panel__approve-btn");
+    expect(btnAfter.textContent).toMatch(/revoke/i);
+  });
+
+  it("failed Approve rolls back UI and shows error toast", async () => {
+    api.approve = vi.fn().mockRejectedValue({ status: 500, message: "boom" });
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 10));
+    const btn = container.querySelector("button.glr-panel__approve-btn");
+    btn.click();
+    await new Promise(r => setTimeout(r, 20));
+    // Button back to "Approve" (not "Revoke") after rollback
+    const btnAfter = container.querySelector("button.glr-panel__approve-btn");
+    expect(btnAfter.textContent).toMatch(/approve/i);
+    // Toast visible
+    expect(document.querySelector(".glr-toast--error")).not.toBeNull();
+  });
+});
