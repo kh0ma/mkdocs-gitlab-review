@@ -646,16 +646,17 @@
       btn.className = "glr-action-btn";
       var isExpanded = false;
       var count = discussions.length;
+      var chatSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2z"/></svg>';
 
       function updateBtn() {
         if (isExpanded) {
-          btn.textContent = "−";
+          btn.innerHTML = chatSvg + ' <span>\u2212</span>';
           btn.title = "Згорнути";
         } else if (count > 0) {
-          btn.textContent = String(count);
+          btn.innerHTML = chatSvg + ' <span>' + count + '</span>';
           btn.title = "Показати коментарі";
         } else {
-          btn.textContent = "+";
+          btn.innerHTML = chatSvg + ' <span>+</span>';
           btn.title = "Додати коментар";
         }
       }

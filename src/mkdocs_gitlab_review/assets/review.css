@@ -7,39 +7,49 @@
 }
 
 .glr-block--commentable {
-  border-left: 2px solid transparent;
-  padding-right: 2rem;
-  transition: border-color 0.15s;
+  border-left: none;
+  padding-left: 0.5rem;
+  padding-right: 2.5rem;
+  border-radius: 0.25rem;
+  transition: background 200ms ease-out;
 }
 
 .glr-block--commentable:hover {
-  border-left-color: var(--md-accent-fg-color, #536dfe);
+  background: rgba(13, 115, 119, 0.04);
 }
 
-/* Action button: +, number, or − */
+.glr-block--has-comments {
+  background: rgba(13, 115, 119, 0.06);
+}
+
+/* Action button: pill with chat icon */
 .glr-action-btn {
-  display: none;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
   position: absolute;
-  right: 0;
-  top: 0.15rem;
-  min-width: 1.4rem;
-  height: 1.4rem;
-  border-radius: 0.7rem;
-  background: var(--md-accent-fg-color, #536dfe);
+  right: 0.25rem;
+  top: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  background: var(--md-primary-fg-color, #0d7377);
   color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.4rem;
-  text-align: center;
-  padding: 0 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
   cursor: pointer;
   user-select: none;
   z-index: 2;
+  opacity: 0;
+  transform: translateX(0.5rem);
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  border: 0;
+  min-height: 1.5rem;
 }
 
 .glr-block--commentable:hover .glr-action-btn,
 .glr-block--has-comments .glr-action-btn {
-  display: block;
+  opacity: 1;
+  transform: translateX(0);
 }
 
 /* --- Thread container --- */
