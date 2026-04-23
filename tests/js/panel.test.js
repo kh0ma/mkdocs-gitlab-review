@@ -390,6 +390,7 @@ describe("ReviewPanel — Changed files viewed state", () => {
       getPipelineStatus: vi.fn().mockResolvedValue({ status: null }),
       getViewedFiles: vi.fn().mockReturnValue(new Set(["a.md:sha1"])),
       markFileViewed: vi.fn(),
+      unmarkFileViewed: vi.fn(),
     };
     window.__GITLAB_REVIEW__ = { gitlab_url: "https://g", project_id: "42" };
     window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn() });
@@ -422,5 +423,26 @@ describe("ReviewPanel — Changed files viewed state", () => {
     b.checked = true;
     b.dispatchEvent(new Event("change", { bubbles: true }));
     expect(api.markFileViewed).toHaveBeenCalledWith(7, "b.md", "sha1");
+  });
+
+  it("unchecking a box calls api.unmarkFileViewed", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 20));
+    const a = container.querySelector('input[data-path="a.md"]');
+    expect(a.checked).toBe(true);
+    a.checked = false;
+    a.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(api.unmarkFileViewed).toHaveBeenCalledWith(7, "a.md", "sha1");
+  });
+
+  it("unchecking a box decrements the viewed counter in subtitle", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api });
+    await new Promise(r => setTimeout(r, 20));
+    const block = container.querySelector('[data-block="files"]');
+    const a = container.querySelector('input[data-path="a.md"]');
+    a.checked = false;
+    a.dispatchEvent(new Event("change", { bubbles: true }));
+    const sub = block.querySelector(".glr-panel__block-subtitle");
+    expect(sub.textContent).toMatch(/0/);
   });
 });
