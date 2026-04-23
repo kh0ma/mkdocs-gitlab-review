@@ -206,6 +206,24 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   background: #1f883d;
 }
 
+/* Mandatory reviewer badge — orange star overlay */
+.glr-panel__avatar-item--mandatory::after {
+  content: "★";
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d97706;
+  color: #fff;
+  font-size: 6px;
+  line-height: 10px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .glr-panel__avatar-add {
   width: 1.5rem;
   height: 1.5rem;

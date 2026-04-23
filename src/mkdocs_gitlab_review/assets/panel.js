@@ -239,8 +239,19 @@
     '<path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</svg>';
 
+  function collectMandatoryUsernames(approvals) {
+    var set = new Set();
+    if (!approvals || !approvals.rules) return set;
+    approvals.rules.forEach(function (rule) {
+      (rule.eligible_approvers || []).forEach(function (u) {
+        if (u.username) set.add(u.username);
+      });
+    });
+    return set;
+  }
+
   function renderAvatarRow(users, opts) {
-    // opts: {getStatus(user), onRemove(user), onAdd, api, emptyText}
+    // opts: {getStatus(user), onRemove(user), onAdd, api, emptyText, mandatoryUsernames}
     var row = document.createElement("div");
     row.className = "glr-panel__avatar-row";
 
@@ -252,12 +263,15 @@
     } else {
       users.forEach(function (u) {
         var status = opts.getStatus ? opts.getStatus(u) : null;
+        var isMandatory = opts.mandatoryUsernames && opts.mandatoryUsernames.has(u.username);
         var item = document.createElement("span");
         item.className = "glr-panel__avatar-item";
         if (status) item.classList.add("glr-panel__avatar-item--" + status);
+        if (isMandatory) item.classList.add("glr-panel__avatar-item--mandatory");
 
         var tooltipName = u.name || u.username;
         var tooltipStatus = status === "approved" ? " — Схвалив" : status === "requested" ? " — Очікує" : "";
+        if (isMandatory) tooltipName += " (обов'язковий)";
         item.title = tooltipName + tooltipStatus;
 
         if (u.avatar_url) {
@@ -334,8 +348,11 @@
     var approvedUsernames = new Set(
       (ctx && ctx.approvals && ctx.approvals.approved_by || []).map(function (u) { return u.username; })
     );
+    var mandatoryUsernames = ctx && ctx.approvals ? collectMandatoryUsernames(ctx.approvals) : new Set();
+
     var row = renderAvatarRow(mr.reviewers, {
       emptyText: "Рецензентів не призначено",
+      mandatoryUsernames: mandatoryUsernames,
       getStatus: function (r) {
         return approvedUsernames.has(r.username) ? "approved" : "requested";
       },
