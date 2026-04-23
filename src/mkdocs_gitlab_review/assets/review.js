@@ -646,16 +646,17 @@
       btn.className = "glr-action-btn";
       var isExpanded = false;
       var count = discussions.length;
+      var chatSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2z"/></svg>';
 
       function updateBtn() {
         if (isExpanded) {
-          btn.textContent = "−";
+          btn.innerHTML = chatSvg + ' <span>\u2212</span>';
           btn.title = "Згорнути";
         } else if (count > 0) {
-          btn.textContent = String(count);
+          btn.innerHTML = chatSvg + ' <span>' + count + '</span>';
           btn.title = "Показати коментарі";
         } else {
-          btn.textContent = "+";
+          btn.innerHTML = chatSvg + ' <span>+</span>';
           btn.title = "Додати коментар";
         }
       }
@@ -1182,9 +1183,11 @@
     block.insertAdjacentElement("afterend", container);
   }
 
-  function renderNote(note) {
+  function renderNote(note, opts) {
+    opts = opts || {};
     var noteEl = document.createElement("div");
     noteEl.className = "glr-note";
+    if (opts.isReply) noteEl.classList.add("glr-note--reply");
 
     var header = document.createElement("div");
     header.className = "glr-note__header";
@@ -1193,8 +1196,8 @@
       var avatar = document.createElement("img");
       avatar.className = "glr-note__avatar";
       avatar.src = note.author.avatar_url;
-      avatar.width = 20;
-      avatar.height = 20;
+      avatar.width = 22;
+      avatar.height = 22;
       header.appendChild(avatar);
     }
 
@@ -1212,17 +1215,32 @@
     }
     header.appendChild(authorEl);
 
+    // Relative date
     var noteUrl = (config.project_url || config.gitlab_url).replace(/\/$/, "") +
       "/-/merge_requests/" + state.mrIid + "#note_" + note.id;
 
-    var time = document.createElement("a");
-    time.className = "glr-note__time";
-    time.textContent = formatTime(note.created_at);
-    time.href = noteUrl;
-    time.target = "_blank";
-    time.rel = "noopener";
-    time.title = "Відкрити в GitLab";
-    header.appendChild(time);
+    var dateEl = document.createElement("a");
+    dateEl.className = "glr-note__date";
+    dateEl.textContent = relativeDate(note.created_at);
+    dateEl.href = noteUrl;
+    dateEl.target = "_blank";
+    dateEl.rel = "noopener";
+    dateEl.title = formatTime(note.created_at);
+    header.appendChild(dateEl);
+
+    // Edit pencil — only for own notes
+    var currentUser = state.lastMountUser;
+    if (currentUser && note.author && String(note.author.id) === String(currentUser.id) && opts.discussion) {
+      var editBtn = document.createElement("button");
+      editBtn.className = "glr-note__edit";
+      editBtn.title = "Редагувати";
+      editBtn.textContent = "\u270F";
+      editBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        startNoteEdit(noteEl, opts.discussion, note);
+      });
+      header.appendChild(editBtn);
+    }
 
     noteEl.appendChild(header);
 
@@ -1230,20 +1248,112 @@
     body.className = "glr-note__body";
 
     var cleaned = stripFilePrefix(note.body);
-    // Strip GitLab-specific image attributes
     cleaned = cleaned.replace(/\{width=\d+\s+height=\d+\}/g, "");
     if (cleaned && cleaned.charAt(0) === "<") {
       body.innerHTML = fixRelativeUrls(cleaned);
     } else {
       body.innerHTML = renderMd(cleaned);
     }
-    // Render @mentions as styled chips
     highlightMentions(body);
-    // Replace upload images with placeholder linking to this note in GitLab
     loadAuthImages(body, note.id);
     noteEl.appendChild(body);
 
+    // Per-note reactions
+    if (currentUser) {
+      var reactions = document.createElement("div");
+      reactions.className = "glr-note__reactions";
+      var thumbsBtn = document.createElement("button");
+      thumbsBtn.type = "button";
+      thumbsBtn.className = "glr-note__reaction";
+      thumbsBtn.textContent = "\uD83D\uDC4D";
+      thumbsBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (thumbsBtn.disabled) return;
+        thumbsBtn.disabled = true;
+        window.GitlabAPI.toggleNoteEmoji(state.mrIid, note.id, "thumbsup", currentUser.id)
+          .then(function (result) {
+            thumbsBtn.disabled = false;
+            if (result.action === "added") {
+              thumbsBtn.classList.add("glr-note__reaction--active");
+            } else {
+              thumbsBtn.classList.remove("glr-note__reaction--active");
+            }
+          })
+          .catch(function () { thumbsBtn.disabled = false; });
+      });
+      reactions.appendChild(thumbsBtn);
+      noteEl.appendChild(reactions);
+    }
+
     return noteEl;
+  }
+
+  function startNoteEdit(noteEl, discussion, note) {
+    var body = noteEl.querySelector(".glr-note__body");
+    if (!body || body.dataset.editing) return;
+    body.dataset.editing = "1";
+
+    var originalHtml = body.innerHTML;
+    var originalBody = note.body || "";
+
+    var textarea = document.createElement("textarea");
+    textarea.className = "glr-dashboard__card-textarea";
+    textarea.value = originalBody;
+    textarea.style.width = "100%";
+    textarea.addEventListener("click", function (e) { e.stopPropagation(); });
+
+    var actions = document.createElement("div");
+    actions.className = "glr-dashboard__card-edit-actions";
+
+    var saveBtn = document.createElement("button");
+    saveBtn.className = "glr-dashboard__card-save";
+    saveBtn.textContent = "Зберегти";
+
+    var cancelBtn = document.createElement("button");
+    cancelBtn.className = "glr-dashboard__card-cancel";
+    cancelBtn.textContent = "Скасувати";
+
+    actions.appendChild(saveBtn);
+    actions.appendChild(cancelBtn);
+
+    body.innerHTML = "";
+    body.appendChild(textarea);
+    body.appendChild(actions);
+    textarea.focus();
+
+    cancelBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      body.innerHTML = originalHtml;
+      delete body.dataset.editing;
+    });
+
+    saveBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var newBody = textarea.value;
+      if (!newBody.trim()) return;
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Збереження...";
+      cancelBtn.disabled = true;
+
+      window.GitlabAPI.editNote(state.mrIid, discussion.id, note.id, newBody)
+        .then(function () {
+          note.body = newBody;
+          var cleaned = stripFilePrefix(newBody);
+          cleaned = cleaned.replace(/\{width=\d+\s+height=\d+\}/g, "");
+          if (cleaned && cleaned.charAt(0) === "<") {
+            body.innerHTML = fixRelativeUrls(cleaned);
+          } else {
+            body.innerHTML = renderMd(cleaned);
+          }
+          highlightMentions(body);
+          delete body.dataset.editing;
+        })
+        .catch(function () {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Зберегти";
+          cancelBtn.disabled = false;
+        });
+    });
   }
 
   function renderThread(discussion) {
@@ -1253,16 +1363,20 @@
       div.classList.add("glr-thread--resolved");
     }
 
-    (discussion.notes || []).forEach(function (note) {
-      if (note.system) return;
-      div.appendChild(renderNote(note));
+    var userNotes = (discussion.notes || []).filter(function (n) { return !n.system; });
+    userNotes.forEach(function (note, idx) {
+      div.appendChild(renderNote(note, { isReply: idx > 0, discussion: discussion }));
     });
 
-    // Resolve toggle — top-right of thread
+    // Thread actions bar
+    var actionsBar = document.createElement("div");
+    actionsBar.className = "glr-thread__actions";
+
+    // Resolve toggle
     var isResolved = discussion.notes && discussion.notes.some(function (n) { return n.resolved; });
     var resolveBtn = document.createElement("button");
-    resolveBtn.className = "glr-thread__resolve" + (isResolved ? " glr-thread__resolve--active" : "");
-    resolveBtn.innerHTML = (isResolved ? "✓ " : "○ ") + (isResolved ? "Вирішено" : "Вирішити");
+    resolveBtn.className = "glr-thread__action";
+    resolveBtn.innerHTML = (isResolved ? "\u2705 \u0412\u0438\u0440\u0456\u0448\u0435\u043D\u043E" : "\u25CB \u0412\u0438\u0440\u0456\u0448\u0438\u0442\u0438");
     resolveBtn.addEventListener("click", function () {
       var noteId = discussion.notes[0].id;
       var newState = !isResolved;
@@ -1273,17 +1387,35 @@
         { method: "PUT", body: JSON.stringify({ resolved: newState }) }
       ).then(function () {
         isResolved = newState;
-        resolveBtn.className = "glr-thread__resolve" + (newState ? " glr-thread__resolve--active" : "");
-        resolveBtn.innerHTML = (newState ? "✓ " : "○ ") + (newState ? "Вирішено" : "Вирішити");
+        resolveBtn.innerHTML = (newState ? "\u2705 \u0412\u0438\u0440\u0456\u0448\u0435\u043D\u043E" : "\u25CB \u0412\u0438\u0440\u0456\u0448\u0438\u0442\u0438");
         resolveBtn.disabled = false;
         div.classList.toggle("glr-thread--resolved", newState);
       }).catch(function () { resolveBtn.disabled = false; });
     });
-    div.insertBefore(resolveBtn, div.firstChild);
+    actionsBar.appendChild(resolveBtn);
 
-    // Reply form
+    // Reply button
+    var replyBtn = document.createElement("button");
+    replyBtn.className = "glr-thread__action";
+    replyBtn.innerHTML = "\uD83D\uDCAC \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438";
+    actionsBar.appendChild(replyBtn);
+
+    div.appendChild(actionsBar);
+
+    // Reply form (hidden by default, opened by reply button)
     var replyForm = renderReplyForm(discussion.id, div);
+    replyForm.style.display = "none";
     div.appendChild(replyForm);
+
+    replyBtn.addEventListener("click", function () {
+      var isHidden = replyForm.style.display === "none";
+      replyForm.style.display = isHidden ? "" : "none";
+      if (isHidden) {
+        // Also open the input area inside the reply form
+        var inputArea = replyForm.querySelector(".glr-form__area");
+        if (inputArea) inputArea.style.display = "block";
+      }
+    });
 
     return div;
   }
@@ -1306,6 +1438,17 @@
   function createEditor(placeholder) {
     var wrapper = document.createElement("div");
     wrapper.className = "glr-editor";
+
+    // Author identity bar
+    var currentUser = state.lastMountUser;
+    if (currentUser) {
+      var identityBar = document.createElement("div");
+      identityBar.className = "glr-editor__identity";
+      identityBar.innerHTML =
+        (currentUser.avatar_url ? '<img class="glr-editor__avatar" src="' + escapeHtml(currentUser.avatar_url) + '" />' : '') +
+        '<span class="glr-editor__author">' + escapeHtml(currentUser.name || currentUser.username) + '</span>';
+      wrapper.appendChild(identityBar);
+    }
 
     var editorContainer = document.createElement("div");
     editorContainer.className = "glr-editor__quill";
