@@ -904,14 +904,26 @@
 
       card.appendChild(meta);
 
-      // Reactions per card (thumbsup + one random)
+      // Reactions per card (thumbsup + 3 random from shared pool)
       if (state.lastMountUser) {
         var reactions = document.createElement("div");
         reactions.className = "glr-dashboard__card-reactions";
-        var CARD_EMOJIS = { thumbsup: "\uD83D\uDC4D", rocket: "\uD83D\uDE80", tada: "\uD83C\uDF89", heart: "\u2764\uFE0F" };
-        var RANDOM_PICK = ["rocket", "tada", "heart"];
-        var secondEmoji = RANDOM_PICK[Math.floor(Math.random() * RANDOM_PICK.length)];
-        var cardEmojiNames = ["thumbsup", secondEmoji];
+        var CARD_EMOJIS = {
+          thumbsup: "\uD83D\uDC4D", thumbsdown: "\uD83D\uDC4E", rocket: "\uD83D\uDE80", lemon: "\uD83C\uDF4B",
+          see_no_evil: "\uD83D\uDE48", robot: "\uD83E\uDD16", black_cat: "\uD83D\uDC08\u200D\u2B1B", eggplant: "\uD83C\uDF46",
+          cucumber: "\uD83E\uDD52", corn: "\uD83C\uDF3D", carrot: "\uD83E\uDD55",
+        };
+        var CARD_RANDOM_POOL = ["lemon", "rocket", "see_no_evil", "robot", "black_cat", "eggplant", "cucumber", "corn", "carrot"];
+        function cardPickRandom(arr, n) {
+          var copy = arr.slice();
+          var result = [];
+          for (var i = 0; i < n && copy.length > 0; i++) {
+            var idx = Math.floor(Math.random() * copy.length);
+            result.push(copy.splice(idx, 1)[0]);
+          }
+          return result;
+        }
+        var cardEmojiNames = ["thumbsup"].concat(cardPickRandom(CARD_RANDOM_POOL, 3));
 
         cardEmojiNames.forEach(function (emojiName) {
           var reactionBtn = document.createElement("button");
@@ -1244,30 +1256,53 @@
     loadAuthImages(body, note.id);
     noteEl.appendChild(body);
 
-    // Per-note reactions
+    // Per-note reactions — thumbsup + 3 random from shared pool
     if (currentUser) {
       var reactions = document.createElement("div");
       reactions.className = "glr-note__reactions";
-      var thumbsBtn = document.createElement("button");
-      thumbsBtn.type = "button";
-      thumbsBtn.className = "glr-note__reaction";
-      thumbsBtn.textContent = "\uD83D\uDC4D";
-      thumbsBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (thumbsBtn.disabled) return;
-        thumbsBtn.disabled = true;
-        window.GitlabAPI.toggleNoteEmoji(state.mrIid, note.id, "thumbsup", currentUser.id)
-          .then(function (result) {
-            thumbsBtn.disabled = false;
-            if (result.action === "added") {
-              thumbsBtn.classList.add("glr-note__reaction--active");
-            } else {
-              thumbsBtn.classList.remove("glr-note__reaction--active");
-            }
-          })
-          .catch(function () { thumbsBtn.disabled = false; });
+
+      var NOTE_EMOJI_MAP = {
+        thumbsup: "\uD83D\uDC4D", thumbsdown: "\uD83D\uDC4E", rocket: "\uD83D\uDE80", lemon: "\uD83C\uDF4B",
+        see_no_evil: "\uD83D\uDE48", robot: "\uD83E\uDD16", black_cat: "\uD83D\uDC08\u200D\u2B1B", eggplant: "\uD83C\uDF46",
+        cucumber: "\uD83E\uDD52", corn: "\uD83C\uDF3D", carrot: "\uD83E\uDD55",
+      };
+      var NOTE_RANDOM_POOL = ["lemon", "rocket", "see_no_evil", "robot", "black_cat", "eggplant", "cucumber", "corn", "carrot"];
+
+      function notePickRandom(arr, n) {
+        var copy = arr.slice();
+        var result = [];
+        for (var i = 0; i < n && copy.length > 0; i++) {
+          var idx = Math.floor(Math.random() * copy.length);
+          result.push(copy.splice(idx, 1)[0]);
+        }
+        return result;
+      }
+
+      var noteEmojiNames = ["thumbsup"].concat(notePickRandom(NOTE_RANDOM_POOL, 3));
+
+      noteEmojiNames.forEach(function (emojiName) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "glr-note__reaction";
+        btn.textContent = NOTE_EMOJI_MAP[emojiName] || emojiName;
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (btn.disabled) return;
+          btn.disabled = true;
+          window.GitlabAPI.toggleNoteEmoji(state.mrIid, note.id, emojiName, currentUser.id)
+            .then(function (result) {
+              btn.disabled = false;
+              if (result.action === "added") {
+                btn.classList.add("glr-note__reaction--active");
+              } else {
+                btn.classList.remove("glr-note__reaction--active");
+              }
+            })
+            .catch(function () { btn.disabled = false; });
+        });
+        reactions.appendChild(btn);
       });
-      reactions.appendChild(thumbsBtn);
+
       noteEl.appendChild(reactions);
     }
 
