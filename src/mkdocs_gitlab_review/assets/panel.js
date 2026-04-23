@@ -216,74 +216,129 @@
   // -------- Block renderers --------
   // Each returns a DOM node (full block body).
 
+  function renderAvatarRow(users, opts) {
+    // opts: {getStatus(user), onRemove(user), onAdd, api, emptyText}
+    var row = document.createElement("div");
+    row.className = "glr-panel__avatar-row";
+
+    if (!users || users.length === 0) {
+      var empty = document.createElement("p");
+      empty.className = "glr-panel__empty";
+      empty.textContent = opts.emptyText || "";
+      row.appendChild(empty);
+    } else {
+      users.forEach(function (u) {
+        var status = opts.getStatus ? opts.getStatus(u) : null;
+        var item = document.createElement("span");
+        item.className = "glr-panel__avatar-item";
+        if (status) item.classList.add("glr-panel__avatar-item--" + status);
+
+        var tooltipName = u.name || u.username;
+        var tooltipStatus = status === "approved" ? " — Схвалив" : status === "requested" ? " — Очікує" : "";
+        item.title = tooltipName + tooltipStatus;
+
+        if (u.avatar_url) {
+          var img = document.createElement("img");
+          img.className = "glr-panel__avatar-img";
+          img.src = u.avatar_url;
+          img.alt = "";
+          item.appendChild(img);
+        } else {
+          var ph = document.createElement("span");
+          ph.className = "glr-panel__avatar-img glr-panel__avatar-img--placeholder";
+          item.appendChild(ph);
+        }
+
+        if (status === "approved") {
+          var badge = document.createElement("span");
+          badge.className = "glr-panel__avatar-badge glr-panel__avatar-badge--approved";
+          badge.textContent = "✓";
+          item.appendChild(badge);
+        }
+
+        // Click avatar → small popover with remove option
+        if (opts.onRemove) {
+          item.style.cursor = "pointer";
+          item.addEventListener("click", function (e) {
+            e.stopPropagation();
+            var existing = document.querySelector(".glr-panel__avatar-popover");
+            if (existing) existing.remove();
+            var pop = document.createElement("div");
+            pop.className = "glr-panel__avatar-popover";
+            pop.innerHTML =
+              '<div class="glr-panel__avatar-popover__name">' + escapeHtml(u.name || u.username) + '</div>' +
+              '<button type="button" class="glr-panel__avatar-popover__remove">Видалити</button>';
+            pop.querySelector(".glr-panel__avatar-popover__remove").addEventListener("click", function () {
+              pop.remove();
+              opts.onRemove(u);
+            });
+            item.appendChild(pop);
+            setTimeout(function () {
+              document.addEventListener("click", function closePop(ev) {
+                if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener("click", closePop); }
+              });
+            }, 0);
+          });
+        }
+
+        row.appendChild(item);
+      });
+    }
+
+    // Add button (dashed circle)
+    if (opts.onAdd) {
+      var addCircle = document.createElement("button");
+      addCircle.type = "button";
+      addCircle.className = "glr-panel__avatar-add";
+      addCircle.title = "Додати";
+      addCircle.textContent = "+";
+      addCircle.addEventListener("click", function () {
+        openMemberPopover(addCircle, {
+          api: opts.api,
+          onSelect: opts.onAdd,
+        });
+      });
+      row.appendChild(addCircle);
+    }
+
+    return row;
+  }
+
   function renderReviewersBlock(mr, ctx) {
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
-    if (!mr.reviewers || mr.reviewers.length === 0) {
-      body.innerHTML = '<p class="glr-panel__empty">Рецензентів не призначено</p>';
-    } else {
-      var approvedUsernames = new Set(
-        (ctx && ctx.approvals && ctx.approvals.approved_by || []).map(function (u) { return u.username; })
-      );
-      var list = document.createElement("ul");
-      list.className = "glr-panel__user-list";
-      mr.reviewers.forEach(function (r) {
-        var status = approvedUsernames.has(r.username) ? "approved" : "requested";
-        var statusLabel = status === "approved" ? "✓ схвалив" : "⏳ очікує";
-        var li = document.createElement("li");
-        li.className = "glr-panel__user-row glr-panel__user-row--" + status;
-        var chipHtml = '<span class="glr-panel__user">' +
-          (r.avatar_url
-            ? '<img class="glr-panel__avatar" src="' + escapeHtml(r.avatar_url) + '" alt="">'
-            : '<span class="glr-panel__avatar glr-panel__avatar--placeholder"></span>') +
-          (r.name ? '<span class="glr-panel__user-name">' + escapeHtml(r.name) + '</span>' : '') +
-          '<span class="glr-panel__user-username">@' + escapeHtml(r.username) + '</span>' +
-          '</span>';
-        li.innerHTML = chipHtml +
-          ' <span class="glr-panel__user-status">' + statusLabel + '</span>';
-        if (ctx && ctx.api) {
-          var rmBtn = document.createElement("button");
-          rmBtn.type = "button";
-          rmBtn.className = "glr-panel__user-remove";
-          rmBtn.setAttribute("aria-label", "Видалити " + (r.name || r.username));
-          rmBtn.textContent = "×";
-          rmBtn.addEventListener("click", function () {
-            var remaining = mr.reviewers.filter(function (u) { return u.id !== r.id; }).map(function (u) { return u.id; });
-            ctx.api.setReviewers(ctx.mrIid, remaining).then(function () {
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              showToast("Не вдалося видалити: " + (err && err.message || "помилка"), "error");
-            });
-          });
-          li.appendChild(rmBtn);
-        }
-        list.appendChild(li);
-      });
-      body.appendChild(list);
-    }
 
-    if (ctx && ctx.api) {
-      var addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "glr-panel__add-user glr-panel__action-link";
-      addBtn.textContent = "+ Запросити рев'ю";
-      addBtn.addEventListener("click", function () {
-        openMemberPopover(addBtn, {
-          api: ctx.api,
-          onSelect: function (user) {
-            var ids = (mr.reviewers || []).map(function (u) { return u.id; });
-            if (ids.indexOf(user.id) >= 0) return;
-            ids.push(user.id);
-            ctx.api.setReviewers(ctx.mrIid, ids).then(function () {
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              showToast("Не вдалося додати: " + (err && err.message || "помилка"), "error");
-            });
-          },
+    var approvedUsernames = new Set(
+      (ctx && ctx.approvals && ctx.approvals.approved_by || []).map(function (u) { return u.username; })
+    );
+
+    var row = renderAvatarRow(mr.reviewers, {
+      emptyText: "Рецензентів не призначено",
+      getStatus: function (r) {
+        return approvedUsernames.has(r.username) ? "approved" : "requested";
+      },
+      onRemove: ctx && ctx.api ? function (r) {
+        var remaining = mr.reviewers.filter(function (u) { return u.id !== r.id; }).map(function (u) { return u.id; });
+        ctx.api.setReviewers(ctx.mrIid, remaining).then(function () {
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          showToast("Не вдалося видалити: " + (err && err.message || "помилка"), "error");
         });
-      });
-      body.appendChild(addBtn);
-    }
+      } : null,
+      onAdd: ctx && ctx.api ? function (user) {
+        var ids = (mr.reviewers || []).map(function (u) { return u.id; });
+        if (ids.indexOf(user.id) >= 0) return;
+        ids.push(user.id);
+        ctx.api.setReviewers(ctx.mrIid, ids).then(function () {
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          showToast("Не вдалося додати: " + (err && err.message || "помилка"), "error");
+        });
+      } : null,
+      api: ctx && ctx.api,
+    });
+
+    body.appendChild(row);
     return body;
   }
 
@@ -432,64 +487,31 @@
   function renderAssigneesBlock(mr, ctx) {
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
-    if (!mr.assignees || mr.assignees.length === 0) {
-      body.innerHTML = '<p class="glr-panel__empty">Не призначено</p>';
-    } else {
-      var list = document.createElement("ul");
-      list.className = "glr-panel__user-list";
-      mr.assignees.forEach(function (a) {
-        var li = document.createElement("li");
-        li.className = "glr-panel__user-row";
-        li.innerHTML = '<span class="glr-panel__user">' +
-          (a.avatar_url
-            ? '<img class="glr-panel__avatar" src="' + escapeHtml(a.avatar_url) + '" alt="">'
-            : '<span class="glr-panel__avatar glr-panel__avatar--placeholder"></span>') +
-          (a.name ? '<span class="glr-panel__user-name">' + escapeHtml(a.name) + '</span>' : '') +
-          '<span class="glr-panel__user-username">@' + escapeHtml(a.username) + '</span>' +
-          '</span>';
-        if (ctx && ctx.api) {
-          var rmBtn = document.createElement("button");
-          rmBtn.type = "button";
-          rmBtn.className = "glr-panel__user-remove";
-          rmBtn.textContent = "×";
-          rmBtn.setAttribute("aria-label", "Видалити " + (a.name || a.username));
-          rmBtn.addEventListener("click", function () {
-            var remaining = mr.assignees.filter(function (u) { return u.id !== a.id; }).map(function (u) { return u.id; });
-            ctx.api.setAssignees(ctx.mrIid, remaining).then(function () {
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              showToast("Не вдалося видалити: " + (err && err.message || "помилка"), "error");
-            });
-          });
-          li.appendChild(rmBtn);
-        }
-        list.appendChild(li);
-      });
-      body.appendChild(list);
-    }
 
-    if (ctx && ctx.api) {
-      var addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "glr-panel__add-user glr-panel__action-link";
-      addBtn.textContent = "+ Призначити";
-      addBtn.addEventListener("click", function () {
-        openMemberPopover(addBtn, {
-          api: ctx.api,
-          onSelect: function (user) {
-            var ids = (mr.assignees || []).map(function (u) { return u.id; });
-            if (ids.indexOf(user.id) >= 0) return;
-            ids.push(user.id);
-            ctx.api.setAssignees(ctx.mrIid, ids).then(function () {
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              showToast("Не вдалося додати: " + (err && err.message || "помилка"), "error");
-            });
-          },
+    var row = renderAvatarRow(mr.assignees, {
+      emptyText: "Не призначено",
+      onRemove: ctx && ctx.api ? function (a) {
+        var remaining = mr.assignees.filter(function (u) { return u.id !== a.id; }).map(function (u) { return u.id; });
+        ctx.api.setAssignees(ctx.mrIid, remaining).then(function () {
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          showToast("Не вдалося видалити: " + (err && err.message || "помилка"), "error");
         });
-      });
-      body.appendChild(addBtn);
-    }
+      } : null,
+      onAdd: ctx && ctx.api ? function (user) {
+        var ids = (mr.assignees || []).map(function (u) { return u.id; });
+        if (ids.indexOf(user.id) >= 0) return;
+        ids.push(user.id);
+        ctx.api.setAssignees(ctx.mrIid, ids).then(function () {
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          showToast("Не вдалося додати: " + (err && err.message || "помилка"), "error");
+        });
+      } : null,
+      api: ctx && ctx.api,
+    });
+
+    body.appendChild(row);
     return body;
   }
 
