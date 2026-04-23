@@ -19,6 +19,8 @@
     baseBlocks: null,  // array of text blocks from base version
     panelHandle: null,
     tocStash: null,    // {node, parent, next} when ToC is detached for review mode
+    lastMountUser: null,  // cached currentUser for re-mount on breakpoint change
+    breakpointMql: null,  // matchMedia query for cleanup on deactivate
   };
 
   // --- Init ---
@@ -173,22 +175,66 @@
       if (state.panelHandle) state.panelHandle.unmount();
       window.GitlabAPI.getCurrentUser()
         .then(function (user) {
+          state.lastMountUser = user;
           state.panelHandle = window.ReviewPanel.mount(rail, {
             mrIid: state.mrIid,
             api: window.GitlabAPI,
             currentUser: user,
             currentFile: state.currentFile,
           });
+          setupBreakpointListener();
         })
         .catch(function () {
+          state.lastMountUser = null;
           // No user → mount in read-only mode (buttons link to GitLab).
           state.panelHandle = window.ReviewPanel.mount(rail, {
             mrIid: state.mrIid,
             api: window.GitlabAPI,
             currentFile: state.currentFile,
           });
+          setupBreakpointListener();
         });
     });
+  }
+
+  function setupBreakpointListener() {
+    // Avoid duplicate listeners
+    if (state.breakpointMql) return;
+
+    var mql = window.matchMedia("(max-width: 76.1875em)");
+    state.breakpointMql = mql;
+
+    function handleBreakpointChange() {
+      if (!state.reviewActive || !state.panelHandle) return;
+
+      // Unmount current panel
+      state.panelHandle.unmount();
+
+      // Re-detect the correct mount target
+      var rail = document.querySelector(".md-sidebar--secondary");
+      if (!rail || rail.offsetHeight === 0) {
+        rail = document.querySelector(".md-content") || document.body;
+      }
+
+      // Re-mount with cached user context
+      var mountOpts = {
+        mrIid: state.mrIid,
+        api: window.GitlabAPI,
+        currentFile: state.currentFile,
+      };
+      if (state.lastMountUser) {
+        mountOpts.currentUser = state.lastMountUser;
+      }
+      state.panelHandle = window.ReviewPanel.mount(rail, mountOpts);
+    }
+
+    // Modern browsers
+    if (mql.addEventListener) {
+      mql.addEventListener("change", handleBreakpointChange);
+    } else {
+      // Safari <14 fallback
+      mql.addListener(handleBreakpointChange);
+    }
   }
 
   function deactivateReview(toggleBtn) {
@@ -202,10 +248,15 @@
     document.body.classList.remove("glr-review-on");
     reattachToc();
 
+    // Clean up breakpoint listener — the handler checks state.reviewActive
+    // which is already false, so even if the listener lingers it is a no-op.
+    state.breakpointMql = null;
+
     if (state.panelHandle) {
       state.panelHandle.unmount();
       state.panelHandle = null;
     }
+    state.lastMountUser = null;
 
     // Remove all overlay elements
     document.querySelectorAll(".glr-block").forEach(function (el) {
