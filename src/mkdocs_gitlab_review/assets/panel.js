@@ -63,6 +63,11 @@
         }
       });
 
+      var isMobile = window.matchMedia("(max-width: 76.1875em)").matches;
+      if (isMobile) {
+        dlg.classList.add("glr-confirm--mobile");
+      }
+
       dlg.innerHTML =
         '<h3 class="glr-confirm__title">' + escapeHtml(opts.title || "Підтвердіть дію") + '</h3>' +
         '<p class="glr-confirm__body">' + escapeHtml(opts.body || "") + '</p>' +

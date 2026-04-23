@@ -812,6 +812,32 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 
 .glr-confirm--danger .glr-confirm__ok { background: #cf222e; }
 
+.glr-confirm--mobile[open] {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  border-radius: 1rem 1rem 0 0;
+  padding: 1.25rem;
+  box-sizing: border-box;
+}
+
+.glr-confirm--mobile .glr-confirm__buttons {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.glr-confirm--mobile .glr-confirm__cancel,
+.glr-confirm--mobile .glr-confirm__ok {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+}
+
 .glr-panel__user-remove {
   margin-left: auto;
   width: 1.25rem;
