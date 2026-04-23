@@ -922,6 +922,11 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 @media (max-width: 76.1875em) {
   /* Chip bar mounted in .md-content: constrain to viewport */
   .glr-panel--mobile {
+    position: sticky;
+    top: var(--md-header-height, 3.6rem);
+    z-index: 4; /* above content, below modals */
+    background: var(--md-default-bg-color, #fff);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
@@ -946,6 +951,23 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   }
 
   /* Member popover already constrained via max-width in base styles */
+
+  /* Larger avatars inside bottom sheets for better tap targets */
+  .glr-panel__sheet .glr-panel__avatar-img,
+  .glr-panel__sheet .glr-panel__avatar--placeholder {
+    width: 36px;
+    height: 36px;
+  }
+
+  .glr-panel__sheet .glr-panel__avatar-row {
+    gap: 0.5rem;
+  }
+
+  .glr-panel__sheet .glr-panel__avatar-add {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+  }
 }
 
 /* --- Small phones (≤480px) --- */

@@ -819,7 +819,11 @@
     if (!mql.matches) return;
 
     var chipBar = document.querySelector(".glr-panel__chip-bar");
-    if (!chipBar) return;
+    if (!chipBar) {
+      // Panel not mounted yet — retry after a short delay
+      setTimeout(mountCommentsDashboardChip, 200);
+      return;
+    }
 
     var dashboard = document.getElementById("glr-dashboard");
 
