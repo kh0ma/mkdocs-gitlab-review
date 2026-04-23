@@ -205,6 +205,7 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
 
 .glr-panel__avatar-item {
   position: relative;
+  display: inline-block;
   width: 1.5rem;
   height: 1.5rem;
   flex: none;
@@ -1032,8 +1033,8 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   /* Larger avatars inside bottom sheets for better tap targets */
   .glr-panel__sheet .glr-panel__avatar-img,
   .glr-panel__sheet .glr-panel__avatar--placeholder {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 
   .glr-panel__sheet .glr-panel__avatar-row {
@@ -1041,30 +1042,28 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   }
 
   .glr-panel__sheet .glr-panel__avatar-add {
-    width: 40px;
-    height: 40px;
-    font-size: 1.3rem;
-  }
-
-  .glr-panel__sheet .glr-panel__avatar-item {
-    position: relative;
+    width: 44px;
+    height: 44px;
+    font-size: 1.4rem;
   }
 
   .glr-panel__sheet .glr-panel__avatar-badge {
-    width: 14px;
-    height: 14px;
-    font-size: 9px;
-    line-height: 14px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    line-height: 16px;
+    bottom: -2px;
+    right: -2px;
   }
 
   .glr-panel__sheet .glr-panel__avatar-item--mandatory::after,
   .glr-panel__sheet .glr-panel__avatar-item--author::after {
-    width: 14px;
-    height: 14px;
-    font-size: 9px;
-    line-height: 14px;
-    bottom: -3px;
-    right: -3px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    line-height: 16px;
+    bottom: -2px;
+    right: -2px;
   }
 
   .glr-panel__member-popover {
