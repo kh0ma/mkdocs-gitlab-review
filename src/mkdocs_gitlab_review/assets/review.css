@@ -783,6 +783,12 @@
 }
 .glr-dashboard__card-file:hover { text-decoration: underline; }
 
+.glr-dashboard__card-ext-icon {
+  vertical-align: -1px;
+  margin-left: 2px;
+  opacity: 0.6;
+}
+
 .glr-dashboard__card-text {
   margin: 0;
   font-size: 0.78rem;
