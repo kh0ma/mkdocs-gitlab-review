@@ -491,8 +491,8 @@
           (deletions > 0 ? '<span class="glr-panel__deletions">−' + deletions + '</span>' : '') +
           '</span>';
       }
-      var labelHtml = ' <span class="glr-panel__file-status glr-panel__file-status--' + safeStatus + '">' + statusLetter + '</span>' +
-        ' ' + pathTag + statsHtml;
+      var labelHtml = '<span class="glr-panel__file-status--inline glr-panel__file-status--' + safeStatus + '">' + statusLetter + '</span>' +
+        pathTag + statsHtml;
       var span = document.createElement("span");
       span.innerHTML = labelHtml;
       li.appendChild(span);
