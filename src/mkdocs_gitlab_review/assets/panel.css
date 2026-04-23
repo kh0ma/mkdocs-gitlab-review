@@ -25,6 +25,12 @@ body.glr-review-on .md-sidebar--secondary {
   padding: 1rem 0;
 }
 
+/* When the footer is visible, unstick the sidebar so the panel
+   scrolls off the top naturally instead of overlapping the footer. */
+body.glr-footer-visible .md-sidebar--secondary {
+  position: relative;
+}
+
 body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   overflow: visible;
   padding: 0;
@@ -927,8 +933,10 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
     box-sizing: border-box;
   }
 
-  /* Toast: keep within viewport */
+  /* Toast: top-down on mobile so it doesn't cover chip bar */
   #glr-toast-host {
+    top: var(--md-header-height, 3.6rem);
+    bottom: auto;
     left: 1rem;
     right: 1rem;
   }
