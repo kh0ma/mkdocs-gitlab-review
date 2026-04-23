@@ -878,6 +878,10 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   z-index: 10500;
   min-width: 200px;
   max-width: min(18rem, calc(100vw - 2rem));
+  min-height: 300px;
+  max-height: calc(100vh - 8rem);
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   background: var(--md-default-bg-color, #fff);
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -908,7 +912,8 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: calc(5 * 52px);
+  flex: 1;
+  max-height: none;
   overflow-y: auto;
   scrollbar-width: thin;
 }
