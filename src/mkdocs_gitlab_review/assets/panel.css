@@ -21,8 +21,20 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 0.5rem;
   background: var(--md-default-bg-color, #fff);
-  overflow: hidden;
+  /* hidden-x preserves border-radius clipping; auto-y enables vertical scroll
+     when the panel's 5 blocks exceed viewport height. */
+  overflow: hidden auto;
+  max-height: calc(100vh - 6rem);
+  /* Subtle thin scrollbar so it doesn't clash with the clean UI. */
+  scrollbar-width: thin;
 }
+
+.glr-panel::-webkit-scrollbar { width: 6px; }
+.glr-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+.glr-panel::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.3); }
 
 .glr-panel__block {
   background: transparent;
