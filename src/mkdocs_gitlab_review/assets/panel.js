@@ -63,6 +63,11 @@
         }
       });
 
+      var isMobile = window.matchMedia("(max-width: 76.1875em)").matches;
+      if (isMobile) {
+        dlg.classList.add("glr-confirm--mobile");
+      }
+
       dlg.innerHTML =
         '<h3 class="glr-confirm__title">' + escapeHtml(opts.title || "Підтвердіть дію") + '</h3>' +
         '<p class="glr-confirm__body">' + escapeHtml(opts.body || "") + '</p>' +
@@ -128,30 +133,40 @@
     }
 
     var isMobile = window.matchMedia("(max-width: 76.1875em)").matches;
+    var backdrop = null;
+
+    function closePop() { close(); }
+
     if (isMobile) {
-      // Full-screen overlay on mobile
+      // Bottom sheet on mobile
       pop.style.position = "fixed";
-      pop.style.top = "0";
+      pop.style.bottom = "0";
       pop.style.left = "0";
       pop.style.right = "0";
-      pop.style.bottom = "0";
+      pop.style.top = "auto";
       pop.style.width = "100%";
       pop.style.maxWidth = "100%";
-      pop.style.height = "100%";
-      pop.style.borderRadius = "0";
-      pop.style.boxShadow = "none";
+      pop.style.maxHeight = "85vh";
+      pop.style.borderRadius = "1rem 1rem 0 0";
       pop.style.padding = "1rem";
       pop.style.boxSizing = "border-box";
       pop.style.display = "flex";
       pop.style.flexDirection = "column";
-      // Add a close/back button at the top
-      var closeBtn = document.createElement("button");
-      closeBtn.type = "button";
-      closeBtn.className = "glr-panel__member-popover__close";
-      closeBtn.textContent = "← Назад";
-      closeBtn.style.cssText = "align-self:flex-start;border:0;background:transparent;font:inherit;font-size:0.9rem;color:var(--md-primary-fg-color,#0d7377);cursor:pointer;padding:0.3rem 0;margin-bottom:0.5rem;";
-      closeBtn.addEventListener("click", function () { close(); });
-      pop.insertBefore(closeBtn, pop.firstChild);
+      pop.style.boxShadow = "0 -8px 32px rgba(0,0,0,0.15)";
+      pop.style.animation = "glr-slide-up-sheet 250ms ease-out";
+
+      // Semi-transparent backdrop
+      backdrop = document.createElement("div");
+      backdrop.className = "glr-panel__member-backdrop";
+      backdrop.addEventListener("click", function () { closePop(); });
+      document.body.appendChild(backdrop);
+
+      // Close button at the top
+      var closeBar = document.createElement("div");
+      closeBar.className = "glr-panel__member-popover__close-bar";
+      closeBar.innerHTML = '<button type="button" class="glr-panel__member-popover__close-btn">\u2715</button>';
+      closeBar.querySelector("button").addEventListener("click", closePop);
+      pop.insertBefore(closeBar, pop.firstChild);
     } else {
       var anchorRect = anchor.getBoundingClientRect();
       var popTop = anchorRect.bottom + 4;
@@ -231,6 +246,7 @@
     }
     function close() {
       document.removeEventListener("click", onOutsideClick);
+      if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
       if (pop.parentNode) pop.parentNode.removeChild(pop);
     }
     setTimeout(function () {
