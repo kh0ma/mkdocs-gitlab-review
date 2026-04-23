@@ -283,7 +283,36 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
 
 .glr-panel__approvals-counter { margin: 0 0 0.4rem; }
 
-.glr-panel__file-status { flex: none; width: 1rem; }
+.glr-panel__file-list {
+  max-height: 12rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.glr-panel__files-count {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+}
+
+.glr-panel__file-status {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+}
+.glr-panel__file-status--added { background: #1f883d; }
+.glr-panel__file-status--deleted { background: #cf222e; }
+.glr-panel__file-status--renamed { background: #8250df; }
+.glr-panel__file-status--modified { background: #d97706; }
+
 .glr-panel__file-path { flex: 1; font-family: ui-monospace, monospace; font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .glr-panel__file-stats { flex: none; font-size: 0.72rem; }
 .glr-panel__additions { color: #116329; /* WCAG AA 4.5:1+ on white */ }

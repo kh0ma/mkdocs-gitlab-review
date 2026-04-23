@@ -467,7 +467,7 @@
         }
       });
       li.appendChild(checkbox);
-      var statusIcon = { added: "●", modified: "◐", deleted: "✕", renamed: "→" }[safeStatus];
+      var statusLetter = { added: "A", modified: "M", deleted: "D", renamed: "R" }[safeStatus];
       var fileName = f.path.split("/").pop();
       var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
       var pageUrl = pageMap[f.path];
@@ -477,12 +477,15 @@
       } else {
         pathTag = '<span class="glr-panel__file-path" title="' + escapeHtml(f.path) + '">' + escapeHtml(fileName) + '</span>';
       }
-      var labelHtml = ' <span class="glr-panel__file-status">' + statusIcon + '</span>' +
-        ' ' + pathTag +
-        ' <span class="glr-panel__file-stats">' +
-        '<span class="glr-panel__additions">+' + additions + '</span> ' +
-        '<span class="glr-panel__deletions">−' + deletions + '</span>' +
-        '</span>';
+      var statsHtml = "";
+      if (additions > 0 || deletions > 0) {
+        statsHtml = ' <span class="glr-panel__file-stats">' +
+          (additions > 0 ? '<span class="glr-panel__additions">+' + additions + '</span> ' : '') +
+          (deletions > 0 ? '<span class="glr-panel__deletions">−' + deletions + '</span>' : '') +
+          '</span>';
+      }
+      var labelHtml = ' <span class="glr-panel__file-status glr-panel__file-status--' + safeStatus + '">' + statusLetter + '</span>' +
+        ' ' + pathTag + statsHtml;
       var span = document.createElement("span");
       span.innerHTML = labelHtml;
       li.appendChild(span);
