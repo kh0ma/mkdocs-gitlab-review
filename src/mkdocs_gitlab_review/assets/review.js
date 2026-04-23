@@ -1402,18 +1402,22 @@
 
     div.appendChild(actionsBar);
 
-    // Reply form (hidden by default, opened by reply button)
+    // Reply form (hidden by default, opened by the actions bar reply button)
     var replyForm = renderReplyForm(discussion.id, div);
     replyForm.style.display = "none";
+    // Hide the form's own toggle — the actions bar button replaces it
+    var formToggle = replyForm.querySelector(".glr-form__toggle");
+    if (formToggle) formToggle.style.display = "none";
     div.appendChild(replyForm);
 
     replyBtn.addEventListener("click", function () {
       var isHidden = replyForm.style.display === "none";
       replyForm.style.display = isHidden ? "" : "none";
       if (isHidden) {
-        // Also open the input area inside the reply form
         var inputArea = replyForm.querySelector(".glr-form__area");
         if (inputArea) inputArea.style.display = "block";
+        var editorEl = replyForm.querySelector(".glr-editor__quill");
+        if (editorEl) editorEl.focus();
       }
     });
 
