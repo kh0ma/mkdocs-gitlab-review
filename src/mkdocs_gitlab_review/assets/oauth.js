@@ -153,11 +153,16 @@ window.GitLabOAuth = (function () {
         return Promise.reject(new Error("Token expired"));
       }
       if (!r.ok) {
-        return r.json().then(function (data) {
-          return Promise.reject(data);
+        return r.text().then(function (text) {
+          try { return Promise.reject(JSON.parse(text)); }
+          catch (_) { return Promise.reject({ status: r.status, message: text || r.statusText }); }
         });
       }
-      return r.json();
+      // 204 No Content or empty body — return null instead of failing JSON parse
+      if (r.status === 204) return null;
+      return r.text().then(function (text) {
+        return text ? JSON.parse(text) : null;
+      });
     });
   }
 
