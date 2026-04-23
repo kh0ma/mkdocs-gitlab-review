@@ -80,21 +80,26 @@
 
     function positionDropdown() {
       if (!dropdown) return;
-      var bounds = quill.getBounds(quill.getSelection().index);
-      // Position relative to container.
-      dropdown.style.position = "absolute";
-      dropdown.style.left = bounds.left + "px";
+      var sel = quill.getSelection();
+      if (!sel) return;
+      var bounds = quill.getBounds(sel.index);
+      // Convert editor-relative bounds to viewport-fixed coordinates.
+      var editorEl = quill.root;
+      var editorRect = editorEl.getBoundingClientRect();
+      var left = editorRect.left + bounds.left;
+      var top = editorRect.top + bounds.bottom + 4;
+      // Use fixed positioning so the dropdown escapes any overflow:hidden ancestor.
+      dropdown.style.position = "fixed";
       // Flip above caret if near viewport bottom.
-      var viewportBottom = window.innerHeight;
       var approxDropdownHeight = 240;
-      var dropdownAbsoluteBottom = bounds.bottom + approxDropdownHeight;
-      if (dropdownAbsoluteBottom > viewportBottom - 40) {
-        dropdown.style.top = (bounds.top - approxDropdownHeight - 4) + "px";
+      if (top + approxDropdownHeight > window.innerHeight - 40) {
+        dropdown.style.top = (editorRect.top + bounds.top - approxDropdownHeight - 4) + "px";
         dropdown.dataset.flipped = "true";
       } else {
-        dropdown.style.top = (bounds.bottom + 4) + "px";
+        dropdown.style.top = top + "px";
         dropdown.dataset.flipped = "false";
       }
+      dropdown.style.left = left + "px";
     }
 
     function renderDropdown(members) {
@@ -102,7 +107,7 @@
         dropdown = document.createElement("div");
         dropdown.className = "glr-mention-dropdown";
         dropdown.id = "glr-mention-dropdown";
-        container.appendChild(dropdown);
+        document.body.appendChild(dropdown);
       }
       dropdown.innerHTML = "";
       items = [];
@@ -177,11 +182,12 @@
         clearTimeout(fetchTimer);
         var mySeq = seq.next();
         fetchTimer = setTimeout(function () {
-          searchMembers(match.query, { perPage: 5 })
+          searchMembers(match.query, { perPage: 20 })
             .then(function (members) {
               if (!seq.isLatest(mySeq)) return; // stale
-              if (!members || members.length === 0) { closeDropdown(); return; }
-              renderDropdown(members);
+              var filtered = filterMembers(members || [], match.query).slice(0, 5);
+              if (filtered.length === 0) { closeDropdown(); return; }
+              renderDropdown(filtered);
             })
             .catch(function () {
               if (!seq.isLatest(mySeq)) return;
@@ -203,6 +209,15 @@
       if (dropdown && !container.contains(e.target) && !dropdown.contains(e.target)) {
         closeDropdown();
       }
+    }
+
+    function filterMembers(members, query) {
+      if (!query) return members;
+      var q = query.toLowerCase();
+      return members.filter(function (m) {
+        return (m.username || "").toLowerCase().indexOf(q) !== -1 ||
+               (m.name || "").toLowerCase().indexOf(q) !== -1;
+      });
     }
 
     quill.on("text-change", onTextChange);
