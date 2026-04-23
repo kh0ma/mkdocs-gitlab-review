@@ -930,9 +930,21 @@
     grid-template-columns: repeat(2, 1fr);
     max-height: none;
   }
+  .glr-dashboard__card {
+    padding: 0.75rem;
+  }
   .glr-dashboard__card-avatar { width: 28px; height: 28px; }
   .glr-dashboard__card-avatar-wrap { width: 28px; height: 28px; }
   .glr-dashboard__card-edit { opacity: 0.6; } /* always visible on mobile */
+  .glr-dashboard__card-author { font-size: 0.85rem; }
+  .glr-dashboard__card-text { font-size: 0.85rem; -webkit-line-clamp: 3; }
+  .glr-dashboard__card-reaction {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.85rem;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 /* --- Small phones (≤480px) — Defects #3 and #10 --- */
