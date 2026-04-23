@@ -7,11 +7,10 @@
 }
 
 .glr-block--commentable {
-  border-left: none;
-  padding-left: 0.5rem;
-  padding-right: 2.5rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 0.25rem;
   transition: background 200ms ease-out;
+  cursor: pointer;
 }
 
 .glr-block--commentable:hover {
@@ -22,34 +21,22 @@
   background: rgba(13, 115, 119, 0.06);
 }
 
-/* Action button: pill with chat icon */
-.glr-action-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
+/* Small comment count badge — top-right corner, unobtrusive */
+.glr-comment-badge {
   position: absolute;
   right: 0.25rem;
-  top: 0.25rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 1rem;
+  top: 0.15rem;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 0.55rem;
   background: var(--md-primary-fg-color, #0d7377);
   color: #fff;
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-  user-select: none;
-  z-index: 2;
-  opacity: 0;
-  transform: translateX(0.5rem);
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
-  border: 0;
-  min-height: 1.5rem;
-}
-
-.glr-block--commentable:hover .glr-action-btn,
-.glr-block--has-comments .glr-action-btn {
-  opacity: 1;
-  transform: translateX(0);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  text-align: center;
+  pointer-events: none;
 }
 
 /* --- Thread container --- */

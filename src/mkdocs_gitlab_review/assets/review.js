@@ -278,7 +278,7 @@
       el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
         "glr-block--added", "glr-block--context");
     });
-    document.querySelectorAll(".glr-action-btn, .glr-threads, #glr-dashboard, #glr-share-dialog, .glr-block--deleted, .glr-panel__chip--comments, .glr-panel__sheet--comments").forEach(function (el) {
+    document.querySelectorAll(".glr-comment-badge,.glr-threads, #glr-dashboard, #glr-share-dialog, .glr-block--deleted, .glr-panel__chip--comments, .glr-panel__sheet--comments").forEach(function (el) {
       el.remove();
     });
     // Remove share button wrapper
@@ -391,8 +391,7 @@
       target.scrollIntoView({ behavior: "smooth", block: "center" });
       var next = target.nextElementSibling;
       if (!next || !next.classList.contains("glr-threads")) {
-        var actionBtn = target.querySelector(".glr-action-btn");
-        if (actionBtn) actionBtn.click();
+        target.click(); // trigger block click to open threads
       }
       target.style.outline = "2px solid var(--md-accent-fg-color, #536dfe)";
       setTimeout(function () { target.style.outline = ""; }, 2000);
@@ -416,9 +415,8 @@
 
     setTimeout(function () {
       target.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Expand thread
-      var actionBtn = target.querySelector(".glr-action-btn");
-      if (actionBtn) actionBtn.click();
+      // Expand thread by clicking the block
+      target.click();
       target.style.outline = "2px solid var(--md-accent-fg-color, #536dfe)";
       setTimeout(function () { target.style.outline = ""; }, 2000);
     }, 300);
@@ -608,7 +606,7 @@
     // Guard: remove any existing overlay elements before re-rendering.
     // Rapid toggle cycles can cause overlapping async renderOverlay calls;
     // clearing first prevents duplicate dashboard entries and action buttons.
-    document.querySelectorAll(".glr-action-btn, .glr-threads, #glr-dashboard, .glr-block--deleted, .glr-panel__chip--comments, .glr-panel__sheet--comments").forEach(function (el) {
+    document.querySelectorAll(".glr-comment-badge,.glr-threads, #glr-dashboard, .glr-block--deleted, .glr-panel__chip--comments, .glr-panel__sheet--comments").forEach(function (el) {
       el.remove();
     });
     document.querySelectorAll(".glr-block").forEach(function (el) {
@@ -642,48 +640,36 @@
         block.classList.add("glr-block--context");
       }
 
-      var btn = document.createElement("span");
-      btn.className = "glr-action-btn";
       var isExpanded = false;
       var count = discussions.length;
-      var chatSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2z"/></svg>';
 
-      function updateBtn() {
-        if (isExpanded) {
-          btn.innerHTML = chatSvg + ' <span>\u2212</span>';
-          btn.title = "Згорнути";
-        } else if (count > 0) {
-          btn.innerHTML = chatSvg + ' <span>' + count + '</span>';
-          btn.title = "Показати коментарі";
-        } else {
-          btn.innerHTML = chatSvg + ' <span>+</span>';
-          btn.title = "Додати коментар";
-        }
-      }
-
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation();
+      // Click the block itself to toggle comments — no floating button needed
+      block.style.cursor = "pointer";
+      block.addEventListener("click", function (e) {
+        // Don't trigger on clicks inside threads or editors
+        if (e.target.closest(".glr-threads, .glr-form, .glr-editor__quill, .ql-editor")) return;
         var existing = block.nextElementSibling;
         if (existing && existing.classList.contains("glr-threads")) {
           existing.remove();
           isExpanded = false;
-          updateBtn();
         } else {
           showThreads(block, file, line, discussions, canComment);
           isExpanded = true;
-          updateBtn();
         }
       });
 
-      block.appendChild(btn);
-
+      // Small unobtrusive count badge for blocks with comments (no button for empty blocks)
       if (count > 0) {
+        var badge = document.createElement("span");
+        badge.className = "glr-comment-badge";
+        badge.textContent = String(count);
+        badge.title = count + " коментар" + (count > 1 ? "ів" : "");
+        block.appendChild(badge);
         block.classList.add("glr-block--has-comments");
         // Auto-expand threads when comments exist
         showThreads(block, file, line, discussions, canComment);
         isExpanded = true;
       }
-      updateBtn();
     });
 
     // Insert ghost blocks for deleted lines
