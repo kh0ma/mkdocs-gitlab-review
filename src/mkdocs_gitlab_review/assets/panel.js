@@ -585,11 +585,8 @@
     body.className = "glr-panel__block-body glr-panel__actions";
 
     if (mr.state === "opened") {
-      // State badge
-      var openBadge = document.createElement("span");
-      openBadge.className = "glr-panel__state-badge glr-panel__state-badge--open";
-      openBadge.textContent = "Відкрито";
-      body.appendChild(openBadge);
+      // No state badge for open MRs — the presence of Merge/Close buttons
+      // makes the state obvious. Saves vertical space.
 
       // Merge button (primary)
       var mergeBtn = document.createElement("button");
