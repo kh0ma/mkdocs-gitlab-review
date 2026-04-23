@@ -851,7 +851,7 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: calc(5 * 44px);
+  max-height: calc(5 * 52px);
   overflow-y: auto;
   scrollbar-width: thin;
 }
@@ -875,21 +875,26 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   flex: none;
 }
 
+.glr-panel__member-popover__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
 .glr-panel__member-popover__name {
   font-size: 0.85rem;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+  font-weight: 600;
+  color: var(--md-default-fg-color, #000);
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.2;
 }
 
 .glr-panel__member-popover__username {
-  margin-left: auto;
-  flex: none;
+  font-size: 0.7rem;
   color: rgba(0, 0, 0, 0.45);
-  font-size: 0.75rem;
-  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .glr-panel__member-popover__empty {
