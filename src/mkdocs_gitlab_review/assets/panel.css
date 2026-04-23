@@ -710,8 +710,8 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 
 .glr-panel__sheet::backdrop {
   background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(2px);
 }
+
 
 .glr-panel__sheet-close {
   position: absolute;

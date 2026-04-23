@@ -113,8 +113,11 @@
     pop.innerHTML =
       '<input type="text" class="glr-panel__member-popover__input" placeholder="Пошук…" />' +
       '<ul class="glr-panel__member-popover__list" role="listbox"></ul>';
-    // Append to body with position:fixed to escape overflow:auto containers
-    document.body.appendChild(pop);
+    // Append to the nearest open <dialog> (so it stays above the top-layer
+    // backdrop) or to document.body as fallback.
+    var parentDialog = anchor.closest("dialog[open]");
+    var popContainer = parentDialog || document.body;
+    popContainer.appendChild(pop);
     pop.style.position = "fixed";
     pop.style.zIndex = "10500";
 

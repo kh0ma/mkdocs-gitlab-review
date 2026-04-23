@@ -185,6 +185,8 @@
             currentFile: state.currentFile,
           });
           setupBreakpointListener();
+          // Mount comments chip after panel (chip bar now exists)
+          mountCommentsDashboardChip();
         })
         .catch(function () {
           state.lastMountUser = null;
@@ -195,6 +197,7 @@
             currentFile: state.currentFile,
           });
           setupBreakpointListener();
+          mountCommentsDashboardChip();
         });
     });
   }
