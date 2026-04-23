@@ -148,8 +148,9 @@
 /* Per-note reactions */
 .glr-note__reactions {
   display: flex;
-  gap: 0.2rem;
-  margin-top: 0.3rem;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  margin-top: 0.25rem;
 }
 
 .glr-note__reaction {
@@ -1099,10 +1100,14 @@
     padding: 0.5rem;
   }
 
-  /* Dashboard card grid: 2 columns on mobile */
+  /* Dashboard card grid: 2 columns on mobile, scrollable */
   .glr-dashboard__grid {
     grid-template-columns: repeat(2, 1fr);
-    max-height: none;
+    max-height: 60vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
   .glr-dashboard__card {
     padding: 0.75rem;
