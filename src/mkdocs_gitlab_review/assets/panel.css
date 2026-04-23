@@ -10,6 +10,22 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
   display: none !important;
 }
 
+/* Ensure the secondary sidebar stays sticky in flex layouts.
+   MkDocs Material uses a flex container for the main grid; without
+   align-self:flex-start the sidebar stretches to the container height
+   which defeats position:sticky. */
+body.glr-review-on .md-sidebar--secondary {
+  position: sticky;
+  top: var(--md-header-height, 3.6rem);
+  align-self: flex-start;
+  max-height: calc(100vh - var(--md-header-height, 3.6rem));
+  overflow: visible;
+}
+
+body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
+  overflow: visible;
+}
+
 .glr-panel {
   display: flex;
   flex-direction: column;
@@ -29,7 +45,7 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
   scrollbar-width: thin;
   /* Stick to top of sidebar so panel scrolls independently of page content. */
   position: sticky;
-  top: 4.5rem; /* below MkDocs Material header (~3.8rem + margin) */
+  top: 0;
 }
 
 .glr-panel::-webkit-scrollbar { width: 6px; }
