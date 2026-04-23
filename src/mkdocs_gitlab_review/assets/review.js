@@ -1458,9 +1458,29 @@
     return "<p>" + text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>") + "</p>";
   }
 
-  // --- Editor (Quill.js WYSIWYG) ---
+  // --- Editor (Quill.js WYSIWYG on desktop, plain textarea on mobile) ---
 
   function createEditor(placeholder) {
+    var isMobile = window.matchMedia("(max-width: 76.1875em)").matches;
+
+    if (isMobile) {
+      var mobileWrapper = document.createElement("div");
+      mobileWrapper.className = "glr-editor glr-editor--mobile";
+
+      var textarea = document.createElement("textarea");
+      textarea.className = "glr-editor__textarea";
+      textarea.placeholder = placeholder || "Коментар (markdown)...";
+      textarea.rows = 3;
+      mobileWrapper.appendChild(textarea);
+
+      return {
+        el: mobileWrapper,
+        getMarkdown: function () { return textarea.value; },
+        clear: function () { textarea.value = ""; },
+        focus: function () { textarea.focus(); },
+      };
+    }
+
     var wrapper = document.createElement("div");
     wrapper.className = "glr-editor";
 

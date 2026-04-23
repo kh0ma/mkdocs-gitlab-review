@@ -1030,6 +1030,33 @@
   box-shadow: none;
 }
 
+/* --- Mobile plain-textarea editor (replaces Quill on small screens) --- */
+
+.glr-editor--mobile {
+  border: 0;
+  overflow: visible;
+}
+
+.glr-editor--mobile .glr-editor__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 80px;
+  padding: 0.6rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.glr-editor--mobile .glr-editor__textarea:focus {
+  border-color: var(--md-primary-fg-color, #0d7377);
+  box-shadow: 0 0 0 2px rgba(13, 115, 119, 0.1);
+}
+
 /* --- Mobile layout (≤76.1875em — matches MkDocs Material sidebar breakpoint) --- */
 
 @media (max-width: 76.1875em) {
