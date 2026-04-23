@@ -260,6 +260,35 @@
       });
     },
 
+    editNote: function (iid, discussionId, noteId, body) {
+      return apiFetch(projectPath("/merge_requests/" + iid + "/discussions/" + discussionId + "/notes/" + noteId), {
+        method: "PUT",
+        body: JSON.stringify({ body: body }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+
+    toggleNoteEmoji: function (iid, noteId, name, currentUserId) {
+      var notePath = projectPath("/merge_requests/" + iid + "/notes/" + noteId + "/award_emoji");
+      return apiFetch(notePath).then(function (emojis) {
+        var existing = (emojis || []).find(function (e) {
+          return e.name === name && e.user && String(e.user.id) === String(currentUserId);
+        });
+        if (existing) {
+          return apiFetch(notePath + "/" + existing.id, { method: "DELETE" })
+            .then(
+              function () { return { action: "removed" }; },
+              function (err) { if (err && err.status === 404) return { action: "removed" }; return Promise.reject(err); }
+            );
+        }
+        return apiFetch(notePath, {
+          method: "POST",
+          body: JSON.stringify({ name: name }),
+          headers: { "Content-Type": "application/json" },
+        }).then(function () { return { action: "added" }; });
+      });
+    },
+
     getCurrentUser: function () {
       return apiFetch("/user");
     },
