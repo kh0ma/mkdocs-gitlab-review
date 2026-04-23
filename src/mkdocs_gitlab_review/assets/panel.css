@@ -1030,40 +1030,106 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 
   /* Member popover already constrained via max-width in base styles */
 
-  /* Larger avatars inside bottom sheets for better tap targets */
-  .glr-panel__sheet .glr-panel__avatar-img,
-  .glr-panel__sheet .glr-panel__avatar--placeholder {
-    width: 44px;
-    height: 44px;
-  }
+  /* === Mobile avatar row in bottom sheets === */
 
   .glr-panel__sheet .glr-panel__avatar-row {
-    gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
   }
 
-  .glr-panel__sheet .glr-panel__avatar-add {
-    width: 44px;
-    height: 44px;
-    font-size: 1.4rem;
+  .glr-panel__sheet .glr-panel__avatar-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
   }
 
+  .glr-panel__sheet .glr-panel__avatar-img,
+  .glr-panel__sheet .glr-panel__avatar--placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .glr-panel__sheet .glr-panel__avatar--placeholder {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  /* Approved badge — scaled for 48px avatars */
   .glr-panel__sheet .glr-panel__avatar-badge {
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
-    line-height: 16px;
+    position: absolute;
     bottom: -2px;
     right: -2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+    color: #fff;
+    pointer-events: none;
   }
 
-  .glr-panel__sheet .glr-panel__avatar-item--mandatory::after,
-  .glr-panel__sheet .glr-panel__avatar-item--author::after {
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
-    line-height: 16px;
+  .glr-panel__sheet .glr-panel__avatar-badge--approved {
+    background: #1f883d;
+  }
+
+  /* Mandatory badge — orange */
+  .glr-panel__sheet .glr-panel__avatar-item--mandatory::after {
+    content: "\2605";
+    position: absolute;
     bottom: -2px;
     right: -2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #d97706;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Author "A" badge — blue */
+  .glr-panel__sheet .glr-panel__avatar-item--author::after {
+    content: "A";
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #0969da;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Add "+" button */
+  .glr-panel__sheet .glr-panel__avatar-add {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px dashed rgba(0, 0, 0, 0.25);
+    background: transparent;
+    color: rgba(0, 0, 0, 0.4);
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .glr-panel__member-popover {
