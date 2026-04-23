@@ -349,8 +349,7 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   gap: 0.4rem;
 }
 
-.glr-panel__approve-btn,
-.glr-panel__reject-btn {
+.glr-panel__approve-btn {
   flex: 1;
   display: flex;
   align-items: center;
@@ -381,21 +380,12 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
 
 .glr-panel__approve-btn--active:hover { background: #1a7c35; }
 
-.glr-panel__reject-btn {
-  background: rgba(207, 34, 46, 0.08);
-  color: #cf222e;
-}
-
-.glr-panel__reject-btn:hover { background: rgba(207, 34, 46, 0.15); }
-
-.glr-panel__approve-btn:disabled,
-.glr-panel__reject-btn:disabled {
+.glr-panel__approve-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.glr-panel__approve-btn svg,
-.glr-panel__reject-btn svg {
+.glr-panel__approve-btn svg {
   flex: none;
 }
 
