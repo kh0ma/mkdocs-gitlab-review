@@ -760,6 +760,16 @@
   margin-left: auto;
 }
 
+/* --- Comments chip bottom sheet: show dashboard when moved inside sheet --- */
+
+.glr-panel__sheet--comments #glr-dashboard {
+  display: block !important;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* --- Mobile layout (≤76.1875em — matches MkDocs Material sidebar breakpoint) --- */
 
 @media (max-width: 76.1875em) {
