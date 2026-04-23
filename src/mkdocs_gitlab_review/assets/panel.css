@@ -325,14 +325,67 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 .glr-panel__file--deleted .glr-panel__file-path { color: #cf222e; text-decoration: line-through; }
 
 .glr-panel__state-badge {
+  display: inline-block;
   margin: 0 0 0.4rem;
-  padding: 0.3rem 0.5rem;
+  padding: 0.2rem 0.45rem;
   border-radius: 0.25rem;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
+.glr-panel__state-badge--open { background: rgba(31, 136, 61, 0.1); color: #1f883d; }
 .glr-panel__state-badge--merged { background: rgba(130, 80, 223, 0.1); color: #8250df; }
 .glr-panel__state-badge--closed { background: rgba(207, 34, 46, 0.1); color: #cf222e; }
+
+/* Actions block — vertical button stack */
+
+.glr-panel__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.glr-panel__actions-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+}
+
+.glr-panel__actions-btn {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--md-default-fg-color, #000);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.glr-panel__actions-btn:hover { background: rgba(0, 0, 0, 0.04); }
+.glr-panel__actions-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.glr-panel__actions-btn--primary {
+  border-color: var(--md-primary-fg-color, #0d7377);
+  background: var(--md-primary-fg-color, #0d7377);
+  color: #fff;
+  font-weight: 600;
+}
+.glr-panel__actions-btn--primary:hover { background: #0a5e61; }
+.glr-panel__actions-btn--primary:disabled { background: var(--md-primary-fg-color, #0d7377); }
+
+.glr-panel__actions-btn--danger {
+  border-color: transparent;
+  color: #cf222e;
+}
+.glr-panel__actions-btn--danger:hover { background: rgba(207, 34, 46, 0.08); }
 
 .glr-panel__error {
   padding: 0.4rem;

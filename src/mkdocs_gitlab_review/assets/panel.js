@@ -528,13 +528,31 @@
 
   function renderActionsBlock(mr, ctx) {
     var body = document.createElement("div");
-    body.className = "glr-panel__block-body";
+    body.className = "glr-panel__block-body glr-panel__actions";
 
     if (mr.state === "opened") {
-      // Merge button — enable only when: pipeline passing + approvals met + no conflicts
+      // State badge
+      var openBadge = document.createElement("span");
+      openBadge.className = "glr-panel__state-badge glr-panel__state-badge--open";
+      openBadge.textContent = "Відкрито";
+      body.appendChild(openBadge);
+
+      // Delete-branch toggle
+      var deleteBranch = true;
+      var delToggle = document.createElement("label");
+      delToggle.className = "glr-panel__actions-toggle";
+      var delCheckbox = document.createElement("input");
+      delCheckbox.type = "checkbox";
+      delCheckbox.checked = deleteBranch;
+      delCheckbox.addEventListener("change", function () { deleteBranch = delCheckbox.checked; });
+      delToggle.appendChild(delCheckbox);
+      delToggle.appendChild(document.createTextNode(" Видалити гілку після злиття"));
+      body.appendChild(delToggle);
+
+      // Merge button (primary)
       var mergeBtn = document.createElement("button");
       mergeBtn.type = "button";
-      mergeBtn.className = "glr-panel__merge-btn glr-panel__action-link--primary";
+      mergeBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--primary";
       mergeBtn.textContent = "Злити MR";
 
       var disabledReasons = [];
@@ -556,38 +574,25 @@
       mergeBtn.addEventListener("click", function () {
         if (mergeBtn.disabled) return;
         mergeBtn.disabled = true;
-        confirmDialog({
-          title: "Підтвердіть merge",
-          body: "Об'єднати " + mr.source_branch + " → " + (mr.target_branch || "target") + "?",
-          confirmLabel: "Злити",
-          cancelLabel: "Скасувати",
-          extraFields: [
-            { name: "delete_source_branch", type: "checkbox", label: "Видалити гілку після злиття", default: true },
-          ],
-        }).then(function (result) {
-          if (!result) {
-            mergeBtn.disabled = false;
-            return;
-          }
-          mergeBtn.textContent = "Злиття…";
-          ctx.api.mergeMR(ctx.mrIid, {
-            sha: mr.diff_refs && mr.diff_refs.head_sha,
-            shouldRemoveSourceBranch: !!result.delete_source_branch,
-          }).then(function () {
-            showToast("MR замерджено", "success");
-            if (ctx.onChange) ctx.onChange();
-          }).catch(function (err) {
-            mergeBtn.disabled = false;
-            mergeBtn.textContent = "Злити MR";
-            showToast("Злиття не вдалось: " + (err && err.message || "помилка"), "error");
-          });
+        mergeBtn.textContent = "Злиття…";
+        ctx.api.mergeMR(ctx.mrIid, {
+          sha: mr.diff_refs && mr.diff_refs.head_sha,
+          shouldRemoveSourceBranch: deleteBranch,
+        }).then(function () {
+          showToast("MR замерджено", "success");
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          mergeBtn.disabled = false;
+          mergeBtn.textContent = "Злити MR";
+          showToast("Злиття не вдалось: " + (err && err.message || "помилка"), "error");
         });
       });
       body.appendChild(mergeBtn);
 
+      // Close button (secondary / danger)
       var closeBtn = document.createElement("button");
       closeBtn.type = "button";
-      closeBtn.className = "glr-panel__close-btn glr-panel__action-link";
+      closeBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--danger";
       closeBtn.textContent = "Закрити MR";
       closeBtn.addEventListener("click", function () {
         if (closeBtn.disabled) return;
@@ -615,15 +620,15 @@
       });
       body.appendChild(closeBtn);
     } else if (mr.state === "merged") {
-      var mergedBadge = document.createElement("p");
+      var mergedBadge = document.createElement("span");
       mergedBadge.className = "glr-panel__state-badge glr-panel__state-badge--merged";
       mergedBadge.textContent = "Злито";
       body.appendChild(mergedBadge);
 
-      if (mr.source_branch) {
+      if (mr.source_branch && ctx && ctx.api) {
         var delBtn = document.createElement("button");
         delBtn.type = "button";
-        delBtn.className = "glr-panel__delete-branch-btn glr-panel__action-link";
+        delBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--danger";
         delBtn.textContent = "Видалити гілку (" + mr.source_branch + ")";
         delBtn.addEventListener("click", function () {
           if (delBtn.disabled) return;
@@ -653,13 +658,13 @@
         body.appendChild(delBtn);
       }
     } else if (mr.state === "closed") {
-      var closedBadge = document.createElement("p");
+      var closedBadge = document.createElement("span");
       closedBadge.className = "glr-panel__state-badge glr-panel__state-badge--closed";
       closedBadge.textContent = "Закрито";
       body.appendChild(closedBadge);
 
       var openLink = document.createElement("a");
-      openLink.className = "glr-panel__action-link";
+      openLink.className = "glr-panel__actions-btn";
       openLink.href = mrWebUrl(mr.iid);
       openLink.textContent = "Відкрити в GitLab";
       body.appendChild(openLink);
