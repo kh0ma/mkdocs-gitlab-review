@@ -132,21 +132,27 @@
   text-decoration: none;
 }
 
-.glr-note__edit {
+/* Passive edit hint icon — visual only, not interactive */
+.glr-note__edit-hint {
   margin-left: auto;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
+  opacity: 0.3;
   padding: 0.2rem;
   color: var(--md-default-fg-color--light, #666);
+  pointer-events: none;
 }
-.glr-note:hover .glr-note__edit { opacity: 0.5; }
-.glr-note__edit:hover { opacity: 1 !important; }
+
+/* Editable note body — click to edit */
+.glr-note__body--editable {
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: background 0.15s;
+}
+.glr-note__body--editable:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
 
 .glr-note__time {
   color: var(--md-default-fg-color--light, #999);
@@ -773,22 +779,6 @@
   white-space: nowrap;
 }
 
-.glr-dashboard__card-edit {
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-  padding: 0.15rem;
-  color: var(--md-default-fg-color--light, #666);
-}
-.glr-dashboard__card:hover .glr-dashboard__card-edit { opacity: 0.6; }
-.glr-dashboard__card-edit:hover { opacity: 1 !important; }
-
 .glr-dashboard__card-file {
   display: block;
   font-size: 0.7rem;
@@ -827,8 +817,19 @@
   color: rgba(0, 0, 0, 0.5);
 }
 
-.glr-dashboard__card-status--resolved { color: #1f883d; }
-.glr-dashboard__card-status--open { color: #d97706; }
+/* Resolve toggle on card */
+.glr-dashboard__card-resolve {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0;
+  line-height: 1;
+  transition: opacity 0.15s;
+}
+.glr-dashboard__card-resolve:hover { opacity: 0.7; }
+.glr-dashboard__card-resolve:disabled { opacity: 0.4; cursor: wait; }
+.glr-dashboard__card-resolve--resolved { color: #1f883d; }
 
 .glr-dashboard__card-reactions {
   display: flex;
@@ -1136,9 +1137,6 @@
     font-size: 0.8rem;
   }
 
-  /* Edit always visible on mobile */
-  .glr-note__edit { opacity: 0.5; }
-
   /* Larger reaction buttons */
   .glr-note__reaction {
     padding: 0.2rem 0.4rem;
@@ -1174,7 +1172,6 @@
   }
   .glr-dashboard__card-avatar { width: 28px; height: 28px; }
   .glr-dashboard__card-avatar-wrap { width: 28px; height: 28px; }
-  .glr-dashboard__card-edit { opacity: 0.6; } /* always visible on mobile */
   .glr-dashboard__card-author { font-size: 0.85rem; }
   .glr-dashboard__card-text { font-size: 0.85rem; -webkit-line-clamp: 3; }
   .glr-dashboard__card-reaction {
