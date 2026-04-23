@@ -164,7 +164,12 @@
       renderOverlay();
       scrollToHashLine();
       // Mount right-rail panel with current user (for Approve button authentication).
-      var rail = document.querySelector(".md-sidebar--secondary") || document.body;
+      // On mobile, .md-sidebar--secondary is hidden (display:none / zero height)
+      // by MkDocs Material, so mount inside .md-content instead.
+      var rail = document.querySelector(".md-sidebar--secondary");
+      if (!rail || rail.offsetHeight === 0) {
+        rail = document.querySelector(".md-content") || document.body;
+      }
       if (state.panelHandle) state.panelHandle.unmount();
       window.GitlabAPI.getCurrentUser()
         .then(function (user) {

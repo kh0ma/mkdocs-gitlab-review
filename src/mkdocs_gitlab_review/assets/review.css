@@ -745,3 +745,120 @@
   font-size: 0.875rem;
   margin-left: auto;
 }
+
+/* --- Mobile layout (≤76.1875em — matches MkDocs Material sidebar breakpoint) --- */
+
+@media (max-width: 76.1875em) {
+  /* Defect #3: prevent horizontal overflow from review elements */
+  .glr-file-status,
+  .glr-dashboard,
+  .glr-threads,
+  .glr-form,
+  .glr-editor {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  /* Share dialog: constrain to viewport instead of fixed 22rem */
+  .glr-share-dialog {
+    width: auto;
+    max-width: calc(100vw - 2rem);
+    right: 0;
+    left: auto;
+  }
+
+  .glr-share-dialog__url {
+    min-width: 0;
+  }
+
+  /* Mention dropdown: constrain to viewport */
+  .glr-mention-dropdown,
+  #glr-mention-dropdown {
+    max-width: calc(100vw - 2rem);
+    min-width: 0;
+  }
+
+  /* Block annotations: reduce right padding for smaller screens */
+  .glr-block--commentable {
+    padding-right: 1.6rem;
+  }
+
+  /* Thread container: tighter padding */
+  .glr-threads {
+    padding: 0.5rem;
+  }
+
+  /* Defect #11: dashboard comment text — allow tap to expand on mobile */
+  .glr-dashboard__text {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .glr-dashboard__entry {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+/* --- Small phones (≤480px) — Defects #3 and #10 --- */
+
+@media (max-width: 480px) {
+  /* Defect #10: hide toolbar button labels, show only icons */
+  .glr-toolbar-btn__label {
+    display: none;
+  }
+
+  .glr-toolbar-btn {
+    padding: 0.3rem;
+  }
+
+  /* Share dialog: nearly full-width on small phones */
+  .glr-share-dialog {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    max-width: 100%;
+    border-radius: 0.75rem 0.75rem 0 0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+  }
+
+  /* Deleted ghost blocks: prevent overflow */
+  .glr-block--deleted__content {
+    word-break: break-all;
+  }
+
+  /* Editor: reduce min-height */
+  .glr-editor .ql-editor {
+    min-height: 3rem;
+  }
+
+  /* Dashboard: tighter on small phones */
+  .glr-dashboard__entry {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .glr-dashboard__header {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .glr-dashboard__file {
+    padding: 0.3rem 0.5rem;
+  }
+
+  /* Note body images: constrain */
+  .glr-note__body img {
+    max-width: 100%;
+    height: auto;
+  }
+}

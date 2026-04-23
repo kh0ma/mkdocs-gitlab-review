@@ -674,7 +674,10 @@
     var api = opts.api;
     var mrIid = opts.mrIid;
 
-    var mql = window.matchMedia("(max-width: 768px)");
+    // MkDocs Material hides .md-sidebar--secondary below 76.25em (~1220px).
+    // Use the same breakpoint so the chip-bar mode activates whenever the
+    // sidebar that normally hosts the panel is hidden.
+    var mql = window.matchMedia("(max-width: 76.1875em)");
     var isMobile = mql.matches;
 
     var panel = document.createElement("aside");

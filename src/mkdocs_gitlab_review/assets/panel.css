@@ -422,3 +422,59 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 
 .glr-panel__member-popover__item:hover { background: rgba(13, 115, 119, 0.1); }
 .glr-panel__member-popover__username { margin-left: auto; color: rgba(0, 0, 0, 0.5); font-size: 0.78rem; }
+
+/* --- Mobile layout (≤76.1875em — matches MkDocs Material sidebar breakpoint) --- */
+
+@media (max-width: 76.1875em) {
+  /* Chip bar mounted in .md-content: constrain to viewport */
+  .glr-panel--mobile {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .glr-panel__chip-bar {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Toast: keep within viewport */
+  #glr-toast-host {
+    left: 1rem;
+    right: 1rem;
+  }
+
+  .glr-toast {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Member popover: constrain to viewport */
+  .glr-panel__member-popover {
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+/* --- Small phones (≤480px) --- */
+
+@media (max-width: 480px) {
+  .glr-panel__chip {
+    padding: 0.25rem 0.45rem;
+  }
+
+  .glr-panel__chip-label {
+    font-size: 0.65rem;
+  }
+
+  /* Bottom sheet: full-width, tighter padding */
+  .glr-panel__sheet[open] {
+    padding: 0.75rem;
+    max-height: 80vh;
+  }
+
+  /* Confirm dialog: fit viewport */
+  .glr-confirm[open] {
+    max-width: calc(100vw - 2rem);
+    margin: auto;
+  }
+}
