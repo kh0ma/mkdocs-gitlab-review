@@ -637,8 +637,8 @@
 /* --- @mention autocomplete dropdown --- */
 
 #glr-mention-dropdown {
-  position: absolute;
-  z-index: 200;
+  position: fixed;
+  z-index: 10000;
   background: var(--md-default-bg-color, #fff);
   border: 1px solid var(--md-default-fg-color--lightest, #ddd);
   border-radius: 0.3rem;
@@ -684,10 +684,10 @@
   font-size: 0.75rem;
 }
 
-/* Dropdown anchored inside editor container (new, caret-anchored). */
+/* Dropdown fixed to viewport so it escapes overflow:hidden ancestors. */
 .glr-mention-dropdown {
-  position: absolute;
-  z-index: 100;
+  position: fixed;
+  z-index: 10000;
   min-width: 220px;
   max-width: 320px;
   max-height: 240px;
