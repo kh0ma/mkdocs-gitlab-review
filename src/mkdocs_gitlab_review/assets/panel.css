@@ -206,6 +206,24 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   background: #1f883d;
 }
 
+/* Mandatory reviewer badge — orange star overlay */
+.glr-panel__avatar-item--mandatory::after {
+  content: "★";
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d97706;
+  color: #fff;
+  font-size: 6px;
+  line-height: 10px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .glr-panel__avatar-add {
   width: 1.5rem;
   height: 1.5rem;
@@ -304,7 +322,82 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
 
 .glr-panel__action-link--primary:hover { background: #0a5e61; }
 
-.glr-panel__approvals-counter { margin: 0 0 0.4rem; }
+/* Approvals counter with icon */
+
+.glr-panel__approvals-counter {
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.glr-panel__approvals-counter-icon {
+  display: inline-flex;
+  color: #1f883d;
+}
+
+.glr-panel__approvals-counter-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Approval action buttons — side by side */
+
+.glr-panel__approval-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.glr-panel__approve-btn,
+.glr-panel__reject-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 44px;
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-radius: 0.375rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.glr-panel__approve-btn {
+  background: rgba(31, 136, 61, 0.08);
+  color: #1f883d;
+}
+
+.glr-panel__approve-btn:hover { background: rgba(31, 136, 61, 0.15); }
+
+.glr-panel__approve-btn--active {
+  background: #1f883d;
+  color: #fff;
+}
+
+.glr-panel__approve-btn--active:hover { background: #1a7c35; }
+
+.glr-panel__reject-btn {
+  background: rgba(207, 34, 46, 0.08);
+  color: #cf222e;
+}
+
+.glr-panel__reject-btn:hover { background: rgba(207, 34, 46, 0.15); }
+
+.glr-panel__approve-btn:disabled,
+.glr-panel__reject-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.glr-panel__approve-btn svg,
+.glr-panel__reject-btn svg {
+  flex: none;
+}
 
 .glr-panel__file-list {
   max-height: 12rem;
