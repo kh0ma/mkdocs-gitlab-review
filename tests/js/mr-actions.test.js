@@ -155,7 +155,7 @@ describe("MR Actions — Close flow", () => {
   });
 });
 
-describe("MR Actions — Delete source branch", () => {
+describe("MR Actions — Merged state", () => {
   let container, api;
 
   beforeEach(() => {
@@ -168,23 +168,79 @@ describe("MR Actions — Delete source branch", () => {
         web_url: "https://g/p/-/merge_requests/7",
       }),
     });
-    window.__GITLAB_REVIEW__ = { gitlab_url: "https://g", project_id: "42" };
+    window.__GITLAB_REVIEW__ = { gitlab_url: "https://g", project_id: "42", project_url: "https://g/p" };
     window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn() });
     loadAsset("src/mkdocs_gitlab_review/assets/panel.js");
   });
 
-  it("Delete source branch button visible on merged MR with existing source branch", async () => {
+  it("shows merged badge and GitLab link, no action buttons", async () => {
     window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
     await new Promise(r => setTimeout(r, 20));
-    expect(container.querySelector("button.glr-panel__delete-branch-btn")).not.toBeNull();
+    const badge = container.querySelector(".glr-panel__state-badge--merged");
+    expect(badge).not.toBeNull();
+    expect(badge.textContent).toBe("Злито");
+    const link = container.querySelector(".glr-panel__action-link--secondary");
+    expect(link).not.toBeNull();
+    expect(link.textContent).toBe("Переглянути в GitLab");
+    // No merge/close/delete buttons
+    expect(container.querySelector(".glr-panel__merge-btn")).toBeNull();
+    expect(container.querySelector(".glr-panel__close-btn")).toBeNull();
+    expect(container.querySelector(".glr-panel__delete-branch-btn")).toBeNull();
   });
 
-  it("click calls api.deleteSourceBranch(branch) after confirm", async () => {
+  it("hides Approve button for merged MR", async () => {
     window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
     await new Promise(r => setTimeout(r, 20));
-    container.querySelector("button.glr-panel__delete-branch-btn").click();
-    document.querySelector(".glr-confirm__ok").click();
+    expect(container.querySelector(".glr-panel__approve-btn")).toBeNull();
+  });
+});
+
+describe("MR Actions — Closed state", () => {
+  let container, api;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="mount"></div>';
+    container = document.getElementById("mount");
+    api = makeApi({
+      getMR: vi.fn().mockResolvedValue({
+        iid: 7, reviewers: [], assignees: [],
+        state: "closed", source_branch: "feat/x",
+        web_url: "https://g/p/-/merge_requests/7",
+      }),
+      reopenMR: vi.fn().mockResolvedValue({ state: "opened" }),
+    });
+    window.__GITLAB_REVIEW__ = { gitlab_url: "https://g", project_id: "42", project_url: "https://g/p" };
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn() });
+    loadAsset("src/mkdocs_gitlab_review/assets/panel.js");
+  });
+
+  it("shows closed badge, GitLab link, and Reopen button", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
     await new Promise(r => setTimeout(r, 20));
-    expect(api.deleteSourceBranch).toHaveBeenCalledWith("feat/x");
+    const badge = container.querySelector(".glr-panel__state-badge--closed");
+    expect(badge).not.toBeNull();
+    expect(badge.textContent).toBe("Закрито");
+    const link = container.querySelector(".glr-panel__action-link--secondary");
+    expect(link).not.toBeNull();
+    expect(link.textContent).toBe("Переглянути в GitLab");
+    // No merge button
+    expect(container.querySelector(".glr-panel__merge-btn")).toBeNull();
+  });
+
+  it("Reopen button calls api.reopenMR", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 20));
+    const reopenBtn = Array.from(container.querySelectorAll(".glr-panel__actions-btn"))
+      .find(b => b.textContent === "Відкрити знову");
+    expect(reopenBtn).toBeDefined();
+    reopenBtn.click();
+    await new Promise(r => setTimeout(r, 20));
+    expect(api.reopenMR).toHaveBeenCalledWith(7);
+  });
+
+  it("hides Approve button for closed MR", async () => {
+    window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
+    await new Promise(r => setTimeout(r, 20));
+    expect(container.querySelector(".glr-panel__approve-btn")).toBeNull();
   });
 });
