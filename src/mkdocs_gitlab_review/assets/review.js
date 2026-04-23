@@ -471,6 +471,17 @@
   // --- Rendering ---
 
   function renderOverlay() {
+    // Guard: remove any existing overlay elements before re-rendering.
+    // Rapid toggle cycles can cause overlapping async renderOverlay calls;
+    // clearing first prevents duplicate dashboard entries and action buttons.
+    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, .glr-block--deleted").forEach(function (el) {
+      el.remove();
+    });
+    document.querySelectorAll(".glr-block").forEach(function (el) {
+      el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
+        "glr-block--added", "glr-block--context");
+    });
+
     var fileInfo = state.changedFiles[state.currentFile];
     var isChanged = !!fileInfo;
 
