@@ -742,7 +742,7 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   position: fixed;
   bottom: 1rem;
   right: 1rem;
-  z-index: 11000;
+  z-index: 2147483647;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -755,15 +755,17 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   max-width: 22rem;
   padding: 0.6rem 0.8rem;
   border-radius: 0.5rem;
-  background: #212529;
+  background: rgba(33, 37, 41, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #fff;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   font-size: 0.85rem;
   animation: glr-toast-in 180ms ease-out;
 }
 
-.glr-toast--error { background: #cf222e; }
-.glr-toast--success { background: #1f883d; }
+.glr-toast--error { background: rgba(207, 34, 46, 0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.glr-toast--success { background: rgba(31, 136, 61, 0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .glr-toast--leaving { opacity: 0; transition: opacity 220ms; }
 
 @keyframes glr-toast-in {
