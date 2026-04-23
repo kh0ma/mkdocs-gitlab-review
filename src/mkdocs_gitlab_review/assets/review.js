@@ -801,7 +801,7 @@
 
       card.appendChild(meta);
 
-      // Reactions per card (thumbsup + 3 random from shared pool)
+      // Reactions per card (thumbsup + server-side emojis only)
       if (state.lastMountUser) {
         var reactions = document.createElement("div");
         reactions.className = "glr-dashboard__card-reactions";
@@ -810,17 +810,14 @@
           see_no_evil: "\uD83D\uDE48", robot: "\uD83E\uDD16", black_cat: "\uD83D\uDC08\u200D\u2B1B", eggplant: "\uD83C\uDF46",
           cucumber: "\uD83E\uDD52", corn: "\uD83C\uDF3D", carrot: "\uD83E\uDD55",
         };
-        var CARD_RANDOM_POOL = ["lemon", "rocket", "see_no_evil", "robot", "black_cat", "eggplant", "cucumber", "corn", "carrot"];
-        function cardPickRandom(arr, n) {
-          var copy = arr.slice();
-          var result = [];
-          for (var i = 0; i < n && copy.length > 0; i++) {
-            var idx = Math.floor(Math.random() * copy.length);
-            result.push(copy.splice(idx, 1)[0]);
-          }
-          return result;
-        }
-        var cardEmojiNames = ["thumbsup"].concat(cardPickRandom(CARD_RANDOM_POOL, 3));
+        // Collect emoji names from server (award_emoji on note)
+        var serverEmojis = (note.award_emoji || []).map(function (e) { return e.name; });
+        var seen = {};
+        var cardEmojiNames = ["thumbsup"];
+        seen["thumbsup"] = true;
+        serverEmojis.forEach(function (name) {
+          if (!seen[name]) { seen[name] = true; cardEmojiNames.push(name); }
+        });
 
         cardEmojiNames.forEach(function (emojiName) {
           var reactionBtn = document.createElement("button");
