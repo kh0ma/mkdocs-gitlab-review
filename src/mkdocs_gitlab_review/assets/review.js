@@ -843,7 +843,7 @@
       authorEl.textContent = note.author.name || note.author.username;
     } else {
       authorEl = document.createElement("strong");
-      authorEl.textContent = "Unknown";
+      authorEl.textContent = "Невідомий";
     }
     header.appendChild(authorEl);
 
