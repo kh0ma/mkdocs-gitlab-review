@@ -257,6 +257,25 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   z-index: 1;
 }
 
+/* MR author badge — blue "A" overlay */
+.glr-panel__avatar-item--author::after {
+  content: "A";
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0969da;
+  color: #fff;
+  font-size: 6px;
+  font-weight: 700;
+  line-height: 10px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .glr-panel__avatar-add {
   width: 1.5rem;
   height: 1.5rem;
