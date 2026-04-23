@@ -111,16 +111,23 @@
     var pop = document.createElement("div");
     pop.className = "glr-panel__member-popover";
     pop.innerHTML =
-      '<input type="text" class="glr-panel__member-popover__input" placeholder="Пошук користувача…" />' +
+      '<input type="text" class="glr-panel__member-popover__input" placeholder="Пошук…" />' +
       '<ul class="glr-panel__member-popover__list" role="listbox"></ul>';
     // Append to body with position:fixed to escape overflow:auto containers
     document.body.appendChild(pop);
     pop.style.position = "fixed";
     pop.style.zIndex = "10500";
+
+    // Width: match the parent block width for visual alignment
+    var blockEl = anchor.closest(".glr-panel__block") || anchor.closest(".glr-panel");
+    if (blockEl) {
+      pop.style.width = blockEl.getBoundingClientRect().width + "px";
+    }
+
     var anchorRect = anchor.getBoundingClientRect();
     var popTop = anchorRect.bottom + 4;
-    var popLeft = anchorRect.left;
-    // Flip above trigger if it would go below viewport
+    // Align popover left edge with the block left edge (or anchor if no block)
+    var popLeft = blockEl ? blockEl.getBoundingClientRect().left : anchorRect.left;
     pop.style.top = popTop + "px";
     pop.style.left = popLeft + "px";
     // After rendering, adjust if overflowing viewport
@@ -139,8 +146,20 @@
     var timer = null;
     var sequence = 0;
 
+    function showLoading() {
+      list.innerHTML = '<li class="glr-panel__member-popover__loading">Пошук…</li>';
+    }
+
+    function showEmpty() {
+      list.innerHTML = '<li class="glr-panel__member-popover__empty">Нікого не знайдено</li>';
+    }
+
     function render(members) {
       list.innerHTML = "";
+      if (!members || members.length === 0) {
+        showEmpty();
+        return;
+      }
       members.forEach(function (m) {
         var li = document.createElement("li");
         li.className = "glr-panel__member-popover__item";
@@ -163,6 +182,7 @@
       var query = input.value;
       clearTimeout(timer);
       var mySeq = ++sequence;
+      showLoading();
       timer = setTimeout(function () {
         opts.api.searchMembers(query, { perPage: 10 }).then(function (members) {
           if (mySeq !== sequence) return;
