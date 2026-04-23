@@ -123,11 +123,9 @@
 
     searchMembers: function (query, opts) {
       var perPage = (opts && opts.perPage) || 5;
-      return apiFetch(
-        projectPath(
-          "/members/all?search=" + encodeURIComponent(query) + "&per_page=" + perPage
-        )
-      );
+      var qs = "per_page=" + perPage;
+      if (query) qs = "query=" + encodeURIComponent(query) + "&" + qs;
+      return apiFetch(projectPath("/members/all?" + qs));
     },
 
     markFileViewed: function (iid, filePath, sha) {

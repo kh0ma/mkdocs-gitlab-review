@@ -95,11 +95,11 @@ describe("GitlabAPI", () => {
     );
   });
 
-  it("searchMembers GETs /members/all with search + per_page", async () => {
+  it("searchMembers GETs /members/all with query + per_page", async () => {
     fetchMock.mockResolvedValueOnce([{ id: 1, username: "o" }]);
     await window.GitlabAPI.searchMembers("o", { perPage: 10 });
     expect(fetchMock).toHaveBeenCalledWith(
-      "/projects/42/members/all?search=o&per_page=10"
+      "/projects/42/members/all?query=o&per_page=10"
     );
   });
 
@@ -108,7 +108,15 @@ describe("GitlabAPI", () => {
     await window.GitlabAPI.searchMembers("олек");
     // Default perPage is 5
     expect(fetchMock).toHaveBeenCalledWith(
-      "/projects/42/members/all?search=" + encodeURIComponent("олек") + "&per_page=5"
+      "/projects/42/members/all?query=" + encodeURIComponent("олек") + "&per_page=5"
+    );
+  });
+
+  it("searchMembers omits query param when query is empty", async () => {
+    fetchMock.mockResolvedValueOnce([]);
+    await window.GitlabAPI.searchMembers("");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/projects/42/members/all?per_page=5"
     );
   });
 
