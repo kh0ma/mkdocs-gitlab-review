@@ -734,7 +734,7 @@
   var BLOCK_DEFS = [
     { key: "reviewers",  title: "Рецензенти" },
     { key: "approvals",  title: "Схвалення" },
-    { key: "files",      title: "Змінені файли" },
+    { key: "files",      title: "Змінено" },
     { key: "assignees",  title: "Призначені" },
     { key: "actions",    title: "Дії з MR" },
   ];
