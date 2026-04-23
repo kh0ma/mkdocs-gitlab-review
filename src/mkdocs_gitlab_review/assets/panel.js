@@ -665,8 +665,28 @@
     body.className = "glr-panel__block-body glr-panel__actions";
 
     if (mr.state === "opened") {
-      // No state badge for open MRs — the presence of Merge/Close buttons
-      // makes the state obvious. Saves vertical space.
+      var isDraft = !!(mr.draft || mr.work_in_progress || (mr.title && /^Draft:\s/i.test(mr.title)));
+
+      // Draft/Undraft toggle link
+      var draftLink = document.createElement("a");
+      draftLink.href = "#";
+      draftLink.className = "glr-panel__action-link glr-panel__action-link--secondary";
+      draftLink.textContent = isDraft ? "Зняти Draft" : "Позначити як Draft";
+      draftLink.addEventListener("click", function (e) {
+        e.preventDefault();
+        if (draftLink.dataset.busy) return;
+        draftLink.dataset.busy = "1";
+        draftLink.textContent = "Оновлення…";
+        ctx.api.setDraft(ctx.mrIid, !isDraft).then(function () {
+          showToast(isDraft ? "Draft знято" : "Позначено як Draft", "success");
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          delete draftLink.dataset.busy;
+          draftLink.textContent = isDraft ? "Зняти Draft" : "Позначити як Draft";
+          showToast("Не вдалося: " + (err && err.message || "помилка"), "error");
+        });
+      });
+      body.appendChild(draftLink);
 
       // Merge button (primary)
       var mergeBtn = document.createElement("button");
@@ -675,6 +695,7 @@
       mergeBtn.textContent = "Злити MR";
 
       var disabledReasons = [];
+      if (isDraft) disabledReasons.push("MR в статусі Draft");
       if (mr.has_conflicts) disabledReasons.push("Конфлікти злиття");
       if (ctx && ctx.pipelineStatus && ctx.pipelineStatus.status &&
           ctx.pipelineStatus.status !== "success" &&
@@ -812,9 +833,20 @@
   }
 
   function replaceBody(blockEl, newBody) {
+    var panel = blockEl.closest(".glr-panel");
+    var scrollTop = panel ? panel.scrollTop : 0;
     var old = blockEl.querySelector(".glr-panel__block-body");
-    if (old) blockEl.replaceChild(newBody, old);
-    else blockEl.appendChild(newBody);
+    if (old) {
+      // Lock height during swap to prevent layout jump
+      blockEl.style.minHeight = blockEl.offsetHeight + "px";
+      blockEl.replaceChild(newBody, old);
+      // Release height lock after paint
+      requestAnimationFrame(function () { blockEl.style.minHeight = ""; });
+    } else {
+      blockEl.appendChild(newBody);
+    }
+    // Restore scroll position
+    if (panel) panel.scrollTop = scrollTop;
     // Update block header subtitle if the body provides one
     if (newBody.__subtitleText) {
       var sub = blockEl.querySelector(".glr-panel__block-subtitle");

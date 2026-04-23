@@ -184,6 +184,24 @@
       });
     },
 
+    setDraft: function (iid, isDraft) {
+      // GitLab API: update MR title with "Draft: " prefix to set draft, remove to unset
+      return apiFetch(projectPath("/merge_requests/" + iid)).then(function (mr) {
+        var title = mr.title || "";
+        var newTitle;
+        if (isDraft) {
+          newTitle = title.match(/^Draft:\s*/i) ? title : "Draft: " + title;
+        } else {
+          newTitle = title.replace(/^Draft:\s*/i, "");
+        }
+        return apiFetch(projectPath("/merge_requests/" + iid), {
+          method: "PUT",
+          body: JSON.stringify({ title: newTitle }),
+          headers: { "Content-Type": "application/json" },
+        });
+      });
+    },
+
     reopenMR: function (iid) {
       return apiFetch(projectPath("/merge_requests/" + iid), {
         method: "PUT",
