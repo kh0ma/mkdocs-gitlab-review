@@ -17,6 +17,24 @@
   background: rgba(13, 115, 119, 0.04);
 }
 
+.glr-block--commentable::before {
+  content: '';
+  position: absolute;
+  left: -1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230d7377' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/%3E%3C/svg%3E") no-repeat center;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  pointer-events: none;
+}
+
+.glr-block--commentable:hover::before {
+  opacity: 0.5;
+}
+
 .glr-block--has-comments {
   background: rgba(13, 115, 119, 0.06);
 }
@@ -1067,6 +1085,8 @@
 /* --- Mobile layout (≤76.1875em — matches MkDocs Material sidebar breakpoint) --- */
 
 @media (max-width: 76.1875em) {
+  .glr-block--commentable::before { display: none; }
+
   /* Defect #3: prevent horizontal overflow from review elements */
   .glr-file-status,
   .glr-dashboard,
