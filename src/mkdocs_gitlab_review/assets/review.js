@@ -21,7 +21,7 @@
     tocStash: null,    // {node, parent, next} when ToC is detached for review mode
     lastMountUser: null,  // cached currentUser for re-mount on breakpoint change
     breakpointMql: null,  // matchMedia query for cleanup on deactivate
-    footerScrollHandler: null, // scroll listener for footer overlap prevention
+    footerScrollHandler: null, // unused — footer overlap now handled by CSS
   };
 
   // --- Init ---
@@ -321,49 +321,12 @@
   }
 
   // --- Footer overlap prevention ---
-  //
-  // Instead of unsticking the sidebar (which makes the panel disappear),
-  // dynamically shrink the panel's max-height as the footer enters the
-  // viewport. The panel stays visible and sticky but stops before the footer.
+  // Footer overlap now handled by CSS overflow:clip on sidebar.
 
   function setupFooterObserver() {
-    if (state.footerObserver) return;
-    var footer = document.querySelector(".md-footer");
-    if (!footer) return;
-
-    function adjustPanelHeight() {
-      var panel = document.querySelector(".glr-panel:not(.glr-panel--mobile)");
-      if (!panel) return;
-      var footerRect = footer.getBoundingClientRect();
-      var headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--md-header-height")) || 57.6;
-      var availableH = Math.max(footerRect.top - headerH - 16, 120); // 16px breathing room, 120px minimum
-      var fullH = window.innerHeight - headerH - 16;
-      panel.style.maxHeight = Math.min(availableH, fullH) + "px";
-    }
-
-    // Use scroll listener (throttled via rAF) for smooth adjustment
-    var ticking = false;
-    state.footerScrollHandler = function () {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(function () {
-          adjustPanelHeight();
-          ticking = false;
-        });
-      }
-    };
-    window.addEventListener("scroll", state.footerScrollHandler, { passive: true });
-    adjustPanelHeight(); // initial
+    // Footer overlap now handled by CSS overflow:clip on sidebar
   }
-
-  function teardownFooterObserver() {
-    if (state.footerScrollHandler) {
-      window.removeEventListener("scroll", state.footerScrollHandler);
-      state.footerScrollHandler = null;
-    }
-    var panel = document.querySelector(".glr-panel:not(.glr-panel--mobile)");
-    if (panel) panel.style.maxHeight = "";
-  }
+  function teardownFooterObserver() {}
 
   // --- Context detection ---
 
@@ -816,6 +779,11 @@
         if (match) { file = match[1]; line = parseInt(match[2]); }
       }
       if (!file) file = "Загальні";
+
+      var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
+      var isLocalFile = !!pageMap[file];
+      var gitlabDiffsUrl = (config.project_url || config.gitlab_url || "").replace(/\/$/, "") +
+        "/-/merge_requests/" + state.mrIid + "/diffs";
 
       var isRes = d.notes.some(function (n) { return n.resolved; });
       var bodyText = stripFilePrefix(note.body || "");

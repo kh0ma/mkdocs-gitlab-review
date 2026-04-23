@@ -19,14 +19,14 @@ body.glr-review-on .md-sidebar--secondary {
   top: var(--md-header-height, 3.6rem);
   align-self: flex-start;
   max-height: calc(100vh - var(--md-header-height, 3.6rem));
-  overflow: visible;
+  overflow: clip;  /* was: visible — clip prevents footer overlap */
   /* Normalize sidebar padding so the panel's top edge
      aligns precisely with the content area (and the dashboard). */
   padding: 1rem 0.75rem 1rem 0;
 }
 
 body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
-  overflow: visible;
+  overflow: visible;  /* inner can overflow into the clipped parent */
   padding: 0;
   margin: 0;
 }
