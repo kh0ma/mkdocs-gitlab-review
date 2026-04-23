@@ -169,6 +169,9 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
 .glr-panel__additions { color: #1f883d; }
 .glr-panel__deletions { color: #cf222e; }
 
+a.glr-panel__file-path { text-decoration: none; color: inherit; }
+a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accent-fg-color, #536dfe); }
+
 .glr-panel__file--added .glr-panel__file-path { color: #1f883d; }
 .glr-panel__file--deleted .glr-panel__file-path { color: #cf222e; text-decoration: line-through; }
 
