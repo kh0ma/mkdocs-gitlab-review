@@ -496,9 +496,17 @@
       var span = document.createElement("span");
       span.innerHTML = labelHtml;
       li.appendChild(span);
+      if (ctx && ctx.currentFile && f.path === ctx.currentFile) {
+        li.classList.add("glr-panel__file--active");
+      }
       ul.appendChild(li);
     });
     body.appendChild(ul);
+    // Scroll the active file into view after the list is rendered
+    requestAnimationFrame(function () {
+      var active = ul.querySelector(".glr-panel__file--active");
+      if (active) active.scrollIntoView({ block: "nearest" });
+    });
     return body;
   }
 
@@ -901,7 +909,7 @@
           var files = results[1];
           var viewed = api.getViewedFiles ? api.getViewedFiles(mrIid) : new Set();
           replaceBody(blockEls.files, renderFilesBlock(files, viewed, mrForSha || { diff_refs: {} }, {
-            api: api, mrIid: mrIid,
+            api: api, mrIid: mrIid, currentFile: opts.currentFile,
           }));
           updateChipValue("files", String((files || []).length));
         })
