@@ -25,12 +25,6 @@ body.glr-review-on .md-sidebar--secondary {
   padding: 1rem 0.75rem 1rem 0;
 }
 
-/* When the footer is visible, unstick the sidebar so the panel
-   scrolls off the top naturally instead of overlapping the footer. */
-body.glr-footer-visible .md-sidebar--secondary {
-  position: relative;
-}
-
 body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   overflow: visible;
   padding: 0;

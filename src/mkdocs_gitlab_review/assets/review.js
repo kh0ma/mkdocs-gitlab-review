@@ -21,7 +21,7 @@
     tocStash: null,    // {node, parent, next} when ToC is detached for review mode
     lastMountUser: null,  // cached currentUser for re-mount on breakpoint change
     breakpointMql: null,  // matchMedia query for cleanup on deactivate
-    footerObserver: null, // IntersectionObserver for footer overlap prevention
+    footerScrollHandler: null, // scroll listener for footer overlap prevention
   };
 
   // --- Init ---
@@ -307,33 +307,47 @@
 
   // --- Footer overlap prevention ---
   //
-  // When the user scrolls to the bottom of the page, the sticky panel
-  // can overlap the footer. We observe the footer element and toggle
-  // a CSS class that unsticks the sidebar, letting it scroll naturally
-  // off the top instead of overlapping the footer.
+  // Instead of unsticking the sidebar (which makes the panel disappear),
+  // dynamically shrink the panel's max-height as the footer enters the
+  // viewport. The panel stays visible and sticky but stops before the footer.
 
   function setupFooterObserver() {
     if (state.footerObserver) return;
     var footer = document.querySelector(".md-footer");
     if (!footer) return;
-    state.footerObserver = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          document.body.classList.add("glr-footer-visible");
-        } else {
-          document.body.classList.remove("glr-footer-visible");
-        }
-      });
-    }, { threshold: 0 });
-    state.footerObserver.observe(footer);
+
+    function adjustPanelHeight() {
+      var panel = document.querySelector(".glr-panel:not(.glr-panel--mobile)");
+      if (!panel) return;
+      var footerRect = footer.getBoundingClientRect();
+      var headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--md-header-height")) || 57.6;
+      var availableH = Math.max(footerRect.top - headerH - 16, 120); // 16px breathing room, 120px minimum
+      var fullH = window.innerHeight - headerH - 16;
+      panel.style.maxHeight = Math.min(availableH, fullH) + "px";
+    }
+
+    // Use scroll listener (throttled via rAF) for smooth adjustment
+    var ticking = false;
+    state.footerScrollHandler = function () {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(function () {
+          adjustPanelHeight();
+          ticking = false;
+        });
+      }
+    };
+    window.addEventListener("scroll", state.footerScrollHandler, { passive: true });
+    adjustPanelHeight(); // initial
   }
 
   function teardownFooterObserver() {
-    if (state.footerObserver) {
-      state.footerObserver.disconnect();
-      state.footerObserver = null;
+    if (state.footerScrollHandler) {
+      window.removeEventListener("scroll", state.footerScrollHandler);
+      state.footerScrollHandler = null;
     }
-    document.body.classList.remove("glr-footer-visible");
+    var panel = document.querySelector(".glr-panel:not(.glr-panel--mobile)");
+    if (panel) panel.style.maxHeight = "";
   }
 
   // --- Context detection ---
