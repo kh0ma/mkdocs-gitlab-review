@@ -212,6 +212,12 @@
     function handleBreakpointChange() {
       if (!state.reviewActive || !state.panelHandle) return;
 
+      // Hide inline dashboard when switching to mobile
+      var dashboard = document.getElementById("glr-dashboard");
+      if (dashboard) {
+        dashboard.style.display = mql.matches ? "none" : "";
+      }
+
       // Unmount current panel
       state.panelHandle.unmount();
 
@@ -231,6 +237,9 @@
         mountOpts.currentUser = state.lastMountUser;
       }
       state.panelHandle = window.ReviewPanel.mount(rail, mountOpts);
+
+      // Re-mount comments chip on mobile transition
+      mountCommentsDashboardChip();
     }
 
     // Modern browsers
