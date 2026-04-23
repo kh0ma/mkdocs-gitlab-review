@@ -520,15 +520,18 @@
       checkbox.dataset.path = f.path;
       checkbox.checked = viewed.has(key);
       checkbox.addEventListener("change", function () {
-        if (ctx && ctx.api && ctx.api.markFileViewed && checkbox.checked) {
-          ctx.api.markFileViewed(ctx.mrIid, f.path, headSha);
+        if (!ctx || !ctx.api) return;
+        if (checkbox.checked) {
+          if (ctx.api.markFileViewed) ctx.api.markFileViewed(ctx.mrIid, f.path, headSha);
           viewedCount++;
-          // Update the subtitle in the block header
-          var block = body.closest ? body.closest(".glr-panel__block") : body.parentNode;
-          if (block) {
-            var sub = block.querySelector(".glr-panel__block-subtitle");
-            if (sub) sub.textContent = viewedCount + ' з ' + files.length + ' переглянуто';
-          }
+        } else {
+          if (ctx.api.unmarkFileViewed) ctx.api.unmarkFileViewed(ctx.mrIid, f.path, headSha);
+          viewedCount--;
+        }
+        var block = body.closest ? body.closest(".glr-panel__block") : body.parentNode;
+        if (block) {
+          var sub = block.querySelector(".glr-panel__block-subtitle");
+          if (sub) sub.textContent = viewedCount + ' з ' + files.length + ' переглянуто';
         }
       });
       li.appendChild(checkbox);
