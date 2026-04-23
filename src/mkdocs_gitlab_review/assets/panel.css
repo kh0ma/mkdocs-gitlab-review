@@ -59,7 +59,7 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(0, 0, 0, 0.75); /* WCAG AA 4.5:1+ on white */
 }
 
 .glr-panel__block-body {
@@ -166,13 +166,13 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
 .glr-panel__file-status { flex: none; width: 1rem; }
 .glr-panel__file-path { flex: 1; font-family: ui-monospace, monospace; font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .glr-panel__file-stats { flex: none; font-size: 0.72rem; }
-.glr-panel__additions { color: #1f883d; }
-.glr-panel__deletions { color: #cf222e; }
+.glr-panel__additions { color: #116329; /* WCAG AA 4.5:1+ on white */ }
+.glr-panel__deletions { color: #a40e26; /* WCAG AA 4.5:1+ on white */ }
 
 a.glr-panel__file-path { text-decoration: none; color: inherit; }
 a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accent-fg-color, #536dfe); }
 
-.glr-panel__file--added .glr-panel__file-path { color: #1f883d; }
+.glr-panel__file--added .glr-panel__file-path { color: #116329; /* WCAG AA 4.5:1+ on white */ }
 .glr-panel__file--deleted .glr-panel__file-path { color: #cf222e; text-decoration: line-through; }
 
 .glr-panel__state-badge {
