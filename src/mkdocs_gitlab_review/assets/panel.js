@@ -428,6 +428,72 @@
       actions.appendChild(approveBtn);
 
       body.appendChild(actions);
+
+      // Emoji reactions — 2×2 grid, contributes to GitLab award emojis
+      var REACTIONS = [
+        { emoji: "👍", name: "thumbsup" },
+        { emoji: "🚀", name: "rocket" },
+        { emoji: "🍋", name: "lemon" },
+        { emoji: "🙈", name: "see_no_evil" },
+      ];
+
+      // Store user ID for toggle logic
+      if (ctx.currentUser && ctx.currentUser.id) {
+        window.__glr_current_user_id = ctx.currentUser.id;
+      }
+
+      var grid = document.createElement("div");
+      grid.className = "glr-panel__reaction-grid";
+
+      // Fetch existing emoji counts
+      ctx.api.getAwardEmojis(ctx.mrIid).then(function (emojis) {
+        REACTIONS.forEach(function (r) {
+          var count = emojis.filter(function (e) { return e.name === r.name; }).length;
+          var myReaction = emojis.some(function (e) {
+            return e.name === r.name && e.user && e.user.id === ctx.currentUser.id;
+          });
+
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "glr-panel__reaction-btn" + (myReaction ? " glr-panel__reaction-btn--active" : "");
+          btn.innerHTML = '<span class="glr-panel__reaction-emoji">' + r.emoji + '</span>' +
+            (count > 0 ? '<span class="glr-panel__reaction-count">' + count + '</span>' : '');
+          btn.title = r.name;
+          btn.addEventListener("click", function () {
+            if (btn.disabled) return;
+            btn.disabled = true;
+            ctx.api.toggleAwardEmoji(ctx.mrIid, r.name).then(function (result) {
+              btn.disabled = false;
+              if (result.action === "added") {
+                btn.classList.add("glr-panel__reaction-btn--active");
+                var countEl = btn.querySelector(".glr-panel__reaction-count");
+                if (countEl) {
+                  countEl.textContent = String(Number(countEl.textContent) + 1);
+                } else {
+                  var newCount = document.createElement("span");
+                  newCount.className = "glr-panel__reaction-count";
+                  newCount.textContent = "1";
+                  btn.appendChild(newCount);
+                }
+              } else {
+                btn.classList.remove("glr-panel__reaction-btn--active");
+                var countEl2 = btn.querySelector(".glr-panel__reaction-count");
+                if (countEl2) {
+                  var val = Number(countEl2.textContent) - 1;
+                  if (val <= 0) countEl2.remove();
+                  else countEl2.textContent = String(val);
+                }
+              }
+            }).catch(function () {
+              btn.disabled = false;
+              showToast("Не вдалося", "error");
+            });
+          });
+          grid.appendChild(btn);
+        });
+      }).catch(function () { /* silently skip if emoji API fails */ });
+
+      body.appendChild(grid);
     } else if (mr.state === "opened") {
       // Fallback: link to GitLab (when no currentUser provided)
       var a = document.createElement("a");

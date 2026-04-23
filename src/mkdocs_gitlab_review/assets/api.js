@@ -199,6 +199,30 @@
       });
     },
 
+    getAwardEmojis: function (iid) {
+      return apiFetch(projectPath("/merge_requests/" + iid + "/award_emoji"));
+    },
+
+    toggleAwardEmoji: function (iid, name) {
+      // Check if user already awarded this emoji; if so, delete it; otherwise, create.
+      return apiFetch(projectPath("/merge_requests/" + iid + "/award_emoji")).then(function (emojis) {
+        var userId = window.__glr_current_user_id;
+        var existing = emojis.find(function (e) {
+          return e.name === name && e.user && e.user.id === userId;
+        });
+        if (existing) {
+          return apiFetch(
+            projectPath("/merge_requests/" + iid + "/award_emoji/" + existing.id),
+            { method: "DELETE" }
+          ).then(function () { return { action: "removed", name: name }; });
+        }
+        return apiFetch(
+          projectPath("/merge_requests/" + iid + "/award_emoji"),
+          { method: "POST", body: JSON.stringify({ name: name }), headers: { "Content-Type": "application/json" } }
+        ).then(function () { return { action: "added", name: name }; });
+      });
+    },
+
     getCurrentUser: function () {
       return apiFetch("/user");
     },
