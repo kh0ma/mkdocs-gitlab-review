@@ -119,10 +119,13 @@
   border: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   transition: opacity 0.15s;
   padding: 0.2rem;
+  color: var(--md-default-fg-color--light, #666);
 }
 .glr-note:hover .glr-note__edit { opacity: 0.5; }
 .glr-note__edit:hover { opacity: 1 !important; }
@@ -757,9 +760,13 @@
   border: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   transition: opacity 0.15s;
+  padding: 0.15rem;
+  color: var(--md-default-fg-color--light, #666);
 }
 .glr-dashboard__card:hover .glr-dashboard__card-edit { opacity: 0.6; }
 .glr-dashboard__card-edit:hover { opacity: 1 !important; }

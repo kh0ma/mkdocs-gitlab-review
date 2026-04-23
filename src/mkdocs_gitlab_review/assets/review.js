@@ -178,6 +178,9 @@
       window.GitlabAPI.getCurrentUser()
         .then(function (user) {
           state.lastMountUser = user;
+          // Re-render overlay now that currentUser is known so edit
+          // buttons and per-note reactions appear on own notes.
+          renderOverlay();
           state.panelHandle = window.ReviewPanel.mount(rail, {
             mrIid: state.mrIid,
             api: window.GitlabAPI,
@@ -851,12 +854,12 @@
       authorEl.textContent = authorName;
       cardTop.appendChild(authorEl);
 
-      // Edit pencil — only for own notes
+      // Edit button — only for own notes
       if (state.lastMountUser && note.author && String(note.author.id) === String(state.lastMountUser.id)) {
         var editBtn = document.createElement("button");
         editBtn.className = "glr-dashboard__card-edit";
         editBtn.title = "Редагувати";
-        editBtn.textContent = "\u270F";
+        editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
         editBtn.addEventListener("click", function (e) {
           e.stopPropagation();
           startCardEdit(card, d, note);
@@ -1226,13 +1229,13 @@
     dateEl.title = formatTime(note.created_at);
     header.appendChild(dateEl);
 
-    // Edit pencil — only for own notes
+    // Edit button — only for own notes
     var currentUser = state.lastMountUser;
     if (currentUser && note.author && String(note.author.id) === String(currentUser.id) && opts.discussion) {
       var editBtn = document.createElement("button");
       editBtn.className = "glr-note__edit";
       editBtn.title = "Редагувати";
-      editBtn.textContent = "\u270F";
+      editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
       editBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         startNoteEdit(noteEl, opts.discussion, note);
