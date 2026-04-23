@@ -79,21 +79,20 @@
     }
 
     function positionDropdown() {
-      if (!dropdown) return;
-      var sel = quill.getSelection();
-      if (!sel) return;
-      var bounds = quill.getBounds(sel.index);
+      if (!dropdown || !currentRange) return;
+      // Position at the @ character, not the current cursor position.
+      var bounds = quill.getBounds(currentRange.startIdx);
       // Convert editor-relative bounds to viewport-fixed coordinates.
       var editorEl = quill.root;
       var editorRect = editorEl.getBoundingClientRect();
       var left = editorRect.left + bounds.left;
-      var top = editorRect.top + bounds.bottom + 4;
+      var top = editorRect.top + bounds.top + bounds.height + 4;
       // Use fixed positioning so the dropdown escapes any overflow:hidden ancestor.
       dropdown.style.position = "fixed";
       // Flip above caret if near viewport bottom.
-      var approxDropdownHeight = 240;
-      if (top + approxDropdownHeight > window.innerHeight - 40) {
-        dropdown.style.top = (editorRect.top + bounds.top - approxDropdownHeight - 4) + "px";
+      var dropdownHeight = dropdown.offsetHeight || 240;
+      if (top + dropdownHeight > window.innerHeight - 40) {
+        dropdown.style.top = (editorRect.top + bounds.top - dropdownHeight - 4) + "px";
         dropdown.dataset.flipped = "true";
       } else {
         dropdown.style.top = top + "px";
@@ -166,6 +165,19 @@
       });
     }
 
+    function showLoading() {
+      if (!dropdown) {
+        dropdown = document.createElement("div");
+        dropdown.className = "glr-mention-dropdown";
+        dropdown.id = "glr-mention-dropdown";
+        document.body.appendChild(dropdown);
+      }
+      dropdown.innerHTML = '<div class="glr-mention-item glr-mention-item--loading">Пошук...</div>';
+      items = [];
+      activeIndex = 0;
+      positionDropdown();
+    }
+
     function onTextChange() {
       // Use setTimeout so Quill's selection is readable after the change settles.
       setTimeout(function () {
@@ -181,19 +193,21 @@
 
         clearTimeout(fetchTimer);
         var mySeq = seq.next();
+        showLoading();
         fetchTimer = setTimeout(function () {
-          searchMembers(match.query, { perPage: 20 })
+          searchMembers(match.query, { perPage: 5 })
             .then(function (members) {
               if (!seq.isLatest(mySeq)) return; // stale
-              var filtered = filterMembers(members || [], match.query).slice(0, 5);
-              if (filtered.length === 0) { closeDropdown(); return; }
-              renderDropdown(filtered);
+              // API does the heavy lifting; client-side filter as fallback for name matching
+              var results = filterMembers(members || [], match.query).slice(0, 5);
+              if (results.length === 0) { closeDropdown(); return; }
+              renderDropdown(results);
             })
             .catch(function () {
               if (!seq.isLatest(mySeq)) return;
               closeDropdown();
             });
-        }, 200);
+        }, 300);
       }, 0);
     }
 
