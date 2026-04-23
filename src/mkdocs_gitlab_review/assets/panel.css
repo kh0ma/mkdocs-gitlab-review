@@ -67,6 +67,8 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   overflow: hidden;
   /* Internal divider between sibling blocks (instead of per-card borders). */
   border-top: 1px solid rgba(0, 0, 0, 0.06);
+  /* Smooth height transitions on re-render instead of snapping */
+  transition: min-height 0.15s ease;
 }
 
 .glr-panel__block:first-child {
