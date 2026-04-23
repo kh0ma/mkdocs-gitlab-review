@@ -131,15 +131,30 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0;
+}
+
+.glr-panel__file-viewed {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 .glr-panel__user-row,
-.glr-panel__rule,
-.glr-panel__file {
+.glr-panel__rule {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.glr-panel__file {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.75rem;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .glr-panel__user {
@@ -461,7 +476,7 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
 }
 
 .glr-panel__file-list {
-  max-height: 12rem;
+  max-height: calc(5 * 1.75rem); /* 5 single-line items */
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
