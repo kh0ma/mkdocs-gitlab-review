@@ -1010,6 +1010,13 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   .glr-panel__sheet .glr-panel__file-list {
     max-height: none;
   }
+
+  .glr-panel__chip-label {
+    font-size: 0.8rem;
+  }
+  .glr-panel__chip-value {
+    font-size: 0.85rem;
+  }
 }
 
 /* --- Small phones (≤480px) --- */
