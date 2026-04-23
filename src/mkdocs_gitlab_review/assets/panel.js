@@ -462,28 +462,9 @@
           btn.addEventListener("click", function () {
             if (btn.disabled) return;
             btn.disabled = true;
-            ctx.api.toggleAwardEmoji(ctx.mrIid, r.name).then(function (result) {
-              btn.disabled = false;
-              if (result.action === "added") {
-                btn.classList.add("glr-panel__reaction-btn--active");
-                var countEl = btn.querySelector(".glr-panel__reaction-count");
-                if (countEl) {
-                  countEl.textContent = String(Number(countEl.textContent) + 1);
-                } else {
-                  var newCount = document.createElement("span");
-                  newCount.className = "glr-panel__reaction-count";
-                  newCount.textContent = "1";
-                  btn.appendChild(newCount);
-                }
-              } else {
-                btn.classList.remove("glr-panel__reaction-btn--active");
-                var countEl2 = btn.querySelector(".glr-panel__reaction-count");
-                if (countEl2) {
-                  var val = Number(countEl2.textContent) - 1;
-                  if (val <= 0) countEl2.remove();
-                  else countEl2.textContent = String(val);
-                }
-              }
+            ctx.api.toggleAwardEmoji(ctx.mrIid, r.name).then(function () {
+              // Re-render the whole panel to get accurate counts from API
+              if (ctx.onChange) ctx.onChange();
             }).catch(function () {
               btn.disabled = false;
               showToast("Не вдалося", "error");
