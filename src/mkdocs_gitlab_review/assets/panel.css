@@ -24,10 +24,9 @@ body.glr-review-on .md-sidebar--secondary {
 
 body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   overflow: visible;
-  /* Reset MkDocs Material's inner padding so the panel's top edge
+  /* Normalize sidebar inner padding so the panel's top edge
      aligns precisely with the content area (and the dashboard). */
-  padding-top: 0;
-  margin-top: 0;
+  padding: 1rem 0;
 }
 
 .glr-panel {
