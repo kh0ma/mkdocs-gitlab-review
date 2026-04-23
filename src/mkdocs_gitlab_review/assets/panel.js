@@ -363,6 +363,13 @@
       return body;
     }
     var headSha = (mr && mr.diff_refs && mr.diff_refs.head_sha) || "unknown";
+
+    // Detect MR preview prefix (e.g. /mr-80/) from current URL
+    var siteBase = config.site_url || "";
+    var mrMatch = window.location.pathname.match(/(\/mr-\d+\/)/);
+    if (mrMatch) {
+      siteBase = siteBase.replace(/\/$/, "") + mrMatch[1];
+    }
     var viewedCount = 0;
     files.forEach(function (f) {
       if (viewed.has(f.path + ":" + headSha)) viewedCount++;
@@ -403,7 +410,7 @@
       var pageUrl = pageMap[f.path];
       var pathTag;
       if (pageUrl) {
-        pathTag = '<a class="glr-panel__file-path" href="' + escapeHtml((config.site_url || "") + pageUrl) + '" title="' + escapeHtml(f.path) + '">' + escapeHtml(fileName) + '</a>';
+        pathTag = '<a class="glr-panel__file-path" href="' + escapeHtml(siteBase + pageUrl) + '" title="' + escapeHtml(f.path) + '">' + escapeHtml(fileName) + '</a>';
       } else {
         pathTag = '<span class="glr-panel__file-path" title="' + escapeHtml(f.path) + '">' + escapeHtml(fileName) + '</span>';
       }
