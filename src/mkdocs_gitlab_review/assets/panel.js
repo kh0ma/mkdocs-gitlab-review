@@ -759,6 +759,11 @@
       closeBtn.addEventListener("click", function () {
         if (closeBtn.disabled) return;
         closeBtn.disabled = true;
+        // If inside a bottom sheet, close it first to avoid modal-on-modal
+        var parentSheet = closeBtn.closest("dialog.glr-panel__sheet");
+        if (parentSheet && typeof parentSheet.close === "function") {
+          try { parentSheet.close(); } catch(e) {}
+        }
         confirmDialog({
           title: "Закрити MR?",
           body: "Закриття MR без merge. Можна буде переобрати у GitLab.",
