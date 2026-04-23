@@ -20,13 +20,15 @@ body.glr-review-on .md-sidebar--secondary {
   align-self: flex-start;
   max-height: calc(100vh - var(--md-header-height, 3.6rem));
   overflow: visible;
+  /* Normalize sidebar padding so the panel's top edge
+     aligns precisely with the content area (and the dashboard). */
+  padding: 1rem 0;
 }
 
 body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   overflow: visible;
-  /* Normalize sidebar inner padding so the panel's top edge
-     aligns precisely with the content area (and the dashboard). */
-  padding: 1rem 0;
+  padding: 0;
+  margin: 0;
 }
 
 .glr-panel {
