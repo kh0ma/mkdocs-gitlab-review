@@ -782,8 +782,8 @@
 
       var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
       var isLocalFile = !!pageMap[file];
-      var gitlabDiffsUrl = (config.project_url || config.gitlab_url || "").replace(/\/$/, "") +
-        "/-/merge_requests/" + state.mrIid + "/diffs";
+      var gitlabMrBase = (config.project_url || config.gitlab_url || "").replace(/\/$/, "") +
+        "/-/merge_requests/" + state.mrIid;
 
       var isRes = d.notes.some(function (n) { return n.resolved; });
       var bodyText = stripFilePrefix(note.body || "");
@@ -845,7 +845,7 @@
         fileLink.href = "#";
         fileLink.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); });
       } else {
-        fileLink.href = gitlabDiffsUrl;
+        fileLink.href = gitlabMrBase + "/diffs";
         fileLink.target = "_blank";
         fileLink.rel = "noopener";
         fileLink.innerHTML = escapeHtml(fileName) + ' <svg class="glr-dashboard__card-ext-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
@@ -949,7 +949,7 @@
       } else {
         card.addEventListener("click", function () {
           // Navigate to the specific note in GitLab (not just the diff view)
-          var noteUrl = gitlabDiffsUrl + "#note_" + note.id;
+          var noteUrl = gitlabMrBase + "#note_" + note.id;
           window.open(noteUrl, "_blank", "noopener");
         });
       }
