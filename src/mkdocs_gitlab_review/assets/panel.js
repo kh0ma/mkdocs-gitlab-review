@@ -429,45 +429,91 @@
 
       body.appendChild(actions);
 
-      // Emoji reactions — 2×2 grid, contributes to GitLab award emojis
-      var REACTIONS = [
-        { emoji: "👍", name: "thumbsup" },
-        { emoji: "🚀", name: "rocket" },
-        { emoji: "🍋", name: "lemon" },
-        { emoji: "🙈", name: "see_no_evil" },
-      ];
+      // Emoji reactions — horizontal row, synced with GitLab award emojis
+      // Emoji name → visual emoji mapping
+      var EMOJI_MAP = {
+        thumbsup: "👍", thumbsdown: "👎", rocket: "🚀", lemon: "🍋",
+        see_no_evil: "🙈", robot: "🤖", black_cat: "🐈‍⬛", eggplant: "🍆",
+        cucumber: "🥒", corn: "🌽", carrot: "🥕",
+      };
+      // Random pool (excluding thumbsup/thumbsdown — those are fixed/server)
+      var RANDOM_POOL = ["lemon", "rocket", "see_no_evil", "robot", "black_cat", "eggplant", "cucumber", "corn", "carrot"];
+
+      function pickRandom(arr, n) {
+        var copy = arr.slice();
+        var result = [];
+        for (var i = 0; i < n && copy.length > 0; i++) {
+          var idx = Math.floor(Math.random() * copy.length);
+          result.push(copy.splice(idx, 1)[0]);
+        }
+        return result;
+      }
+
+      function makeReactionBtn(name, count, isMine) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "glr-panel__reaction-btn" + (isMine ? " glr-panel__reaction-btn--active" : "");
+        btn.innerHTML = '<span class="glr-panel__reaction-emoji">' + (EMOJI_MAP[name] || name) + '</span>' +
+          (count > 0 ? '<span class="glr-panel__reaction-count">' + count + '</span>' : '');
+        btn.title = name;
+        btn.addEventListener("click", function () {
+          if (btn.disabled) return;
+          btn.disabled = true;
+          ctx.api.toggleAwardEmoji(ctx.mrIid, name, ctx.currentUser.id).then(function () {
+            if (ctx.onChange) ctx.onChange();
+          }).catch(function () {
+            btn.disabled = false;
+            showToast("Не вдалося", "error");
+          });
+        });
+        return btn;
+      }
 
       var grid = document.createElement("div");
       grid.className = "glr-panel__reaction-grid";
 
-      // Fetch existing emoji counts
       ctx.api.getAwardEmojis(ctx.mrIid).then(function (emojis) {
-        REACTIONS.forEach(function (r) {
-          var count = emojis.filter(function (e) { return e.name === r.name; }).length;
-          var myReaction = emojis.some(function (e) {
-            return e.name === r.name && e.user && e.user.id === ctx.currentUser.id;
-          });
+        var userId = ctx.currentUser.id;
 
-          var btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "glr-panel__reaction-btn" + (myReaction ? " glr-panel__reaction-btn--active" : "");
-          btn.innerHTML = '<span class="glr-panel__reaction-emoji">' + r.emoji + '</span>' +
-            (count > 0 ? '<span class="glr-panel__reaction-count">' + count + '</span>' : '');
-          btn.title = r.name;
-          btn.addEventListener("click", function () {
-            if (btn.disabled) return;
-            btn.disabled = true;
-            ctx.api.toggleAwardEmoji(ctx.mrIid, r.name, ctx.currentUser.id).then(function () {
-              // Re-render the whole panel to get accurate counts from API
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function () {
-              btn.disabled = false;
-              showToast("Не вдалося", "error");
-            });
-          });
-          grid.appendChild(btn);
+        // Count emojis by name
+        var counts = {};
+        var myEmojis = {};
+        emojis.forEach(function (e) {
+          counts[e.name] = (counts[e.name] || 0) + 1;
+          if (e.user && String(e.user.id) === String(userId)) myEmojis[e.name] = true;
         });
-      }).catch(function () { /* silently skip if emoji API fails */ });
+
+        // 1. Thumbsup is always first
+        grid.appendChild(makeReactionBtn("thumbsup", counts.thumbsup || 0, !!myEmojis.thumbsup));
+
+        // 2. Server emojis (excluding thumbsup): top 3 by count, include thumbsdown if present
+        var serverNames = Object.keys(counts).filter(function (n) { return n !== "thumbsup"; });
+        serverNames.sort(function (a, b) { return (counts[b] || 0) - (counts[a] || 0); });
+        var topServer = serverNames.slice(0, 3);
+
+        if (topServer.length > 0) {
+          // Has server state — show top 3 from server
+          topServer.forEach(function (name) {
+            grid.appendChild(makeReactionBtn(name, counts[name] || 0, !!myEmojis[name]));
+          });
+          // If more than 4 total (thumbsup + 3+), remaining are scrollable
+          serverNames.slice(3).forEach(function (name) {
+            grid.appendChild(makeReactionBtn(name, counts[name] || 0, !!myEmojis[name]));
+          });
+        } else {
+          // No server emojis beyond thumbsup — show 3 random from pool
+          var random3 = pickRandom(RANDOM_POOL, 3);
+          random3.forEach(function (name) {
+            grid.appendChild(makeReactionBtn(name, 0, false));
+          });
+        }
+      }).catch(function () {
+        // API failed — show thumbsup + 3 random
+        grid.appendChild(makeReactionBtn("thumbsup", 0, false));
+        pickRandom(RANDOM_POOL, 3).forEach(function (name) {
+          grid.appendChild(makeReactionBtn(name, 0, false));
+        });
+      });
 
       body.appendChild(grid);
     } else if (mr.state === "opened") {
