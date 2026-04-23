@@ -1161,24 +1161,21 @@
     dateEl.title = formatTime(note.created_at);
     header.appendChild(dateEl);
 
-    // Edit button — only for own notes
+    // Edit hint icon + clickable body — only for own notes
     var currentUser = state.lastMountUser;
-    if (currentUser && note.author && String(note.author.id) === String(currentUser.id) && opts.discussion) {
-      var editBtn = document.createElement("button");
-      editBtn.className = "glr-note__edit";
-      editBtn.title = "Редагувати";
-      editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-      editBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        startNoteEdit(noteEl, opts.discussion, note);
-      });
-      header.appendChild(editBtn);
+    var isOwnNote = currentUser && note.author && String(note.author.id) === String(currentUser.id) && opts.discussion;
+    if (isOwnNote) {
+      var editHint = document.createElement("span");
+      editHint.className = "glr-note__edit-hint";
+      editHint.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+      header.appendChild(editHint);
     }
 
     noteEl.appendChild(header);
 
     var body = document.createElement("div");
     body.className = "glr-note__body";
+    if (isOwnNote) body.classList.add("glr-note__body--editable");
 
     var cleaned = stripFilePrefix(note.body);
     cleaned = cleaned.replace(/\{width=\d+\s+height=\d+\}/g, "");
@@ -1189,6 +1186,16 @@
     }
     highlightMentions(body);
     loadAuthImages(body, note.id);
+
+    // Click body to edit (own notes only)
+    if (isOwnNote) {
+      body.addEventListener("click", function (e) {
+        if (e.target.closest("a")) return; // allow link clicks
+        e.stopPropagation();
+        startNoteEdit(noteEl, opts.discussion, note);
+      });
+    }
+
     noteEl.appendChild(body);
 
     // Per-note reactions — thumbsup + 3 random from shared pool

@@ -132,21 +132,27 @@
   text-decoration: none;
 }
 
-.glr-note__edit {
+/* Passive edit hint icon — visual only, not interactive */
+.glr-note__edit-hint {
   margin-left: auto;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
+  opacity: 0.3;
   padding: 0.2rem;
   color: var(--md-default-fg-color--light, #666);
+  pointer-events: none;
 }
-.glr-note:hover .glr-note__edit { opacity: 0.5; }
-.glr-note__edit:hover { opacity: 1 !important; }
+
+/* Editable note body — click to edit */
+.glr-note__body--editable {
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: background 0.15s;
+}
+.glr-note__body--editable:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
 
 .glr-note__time {
   color: var(--md-default-fg-color--light, #999);
@@ -1130,9 +1136,6 @@
     padding: 0.3rem 0.6rem;
     font-size: 0.8rem;
   }
-
-  /* Edit always visible on mobile */
-  .glr-note__edit { opacity: 0.5; }
 
   /* Larger reaction buttons */
   .glr-note__reaction {
