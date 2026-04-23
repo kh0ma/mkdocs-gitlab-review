@@ -667,26 +667,26 @@
     if (mr.state === "opened") {
       var isDraft = !!(mr.draft || mr.work_in_progress || (mr.title && /^Draft:\s/i.test(mr.title)));
 
-      // Draft/Undraft toggle link
+      // Draft/Undraft toggle — rendered in block header subtitle slot
       var draftLink = document.createElement("a");
       draftLink.href = "#";
-      draftLink.className = "glr-panel__action-link glr-panel__action-link--secondary";
-      draftLink.textContent = isDraft ? "Зняти Draft" : "Позначити як Draft";
+      draftLink.className = "glr-panel__draft-toggle";
+      draftLink.textContent = isDraft ? "Зняти Draft" : "Draft";
       draftLink.addEventListener("click", function (e) {
         e.preventDefault();
         if (draftLink.dataset.busy) return;
         draftLink.dataset.busy = "1";
-        draftLink.textContent = "Оновлення…";
+        draftLink.textContent = "…";
         ctx.api.setDraft(ctx.mrIid, !isDraft).then(function () {
           showToast(isDraft ? "Draft знято" : "Позначено як Draft", "success");
           if (ctx.onChange) ctx.onChange();
         }).catch(function (err) {
           delete draftLink.dataset.busy;
-          draftLink.textContent = isDraft ? "Зняти Draft" : "Позначити як Draft";
+          draftLink.textContent = isDraft ? "Зняти Draft" : "Draft";
           showToast("Не вдалося: " + (err && err.message || "помилка"), "error");
         });
       });
-      body.appendChild(draftLink);
+      body.__subtitleElement = draftLink;
 
       // Merge button (primary)
       var mergeBtn = document.createElement("button");
@@ -848,9 +848,14 @@
     // Restore scroll position
     if (panel) panel.scrollTop = scrollTop;
     // Update block header subtitle if the body provides one
-    if (newBody.__subtitleText) {
-      var sub = blockEl.querySelector(".glr-panel__block-subtitle");
-      if (sub) sub.textContent = newBody.__subtitleText;
+    var sub = blockEl.querySelector(".glr-panel__block-subtitle");
+    if (sub) {
+      sub.textContent = "";
+      if (newBody.__subtitleElement) {
+        sub.appendChild(newBody.__subtitleElement);
+      } else if (newBody.__subtitleText) {
+        sub.textContent = newBody.__subtitleText;
+      }
     }
   }
 
