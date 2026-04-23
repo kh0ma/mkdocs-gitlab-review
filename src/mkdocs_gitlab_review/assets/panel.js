@@ -414,7 +414,6 @@
       approveBtn.addEventListener("click", function () {
         if (approveBtn.disabled) return;
         approveBtn.disabled = true;
-        rejectBtn.disabled = true;
         var call = alreadyApproved ? ctx.api.revokeApproval(ctx.mrIid) : ctx.api.approve(ctx.mrIid);
         call
           .then(function () {
@@ -423,34 +422,10 @@
           })
           .catch(function (err) {
             approveBtn.disabled = false;
-            rejectBtn.disabled = false;
             showToast("Не вдалося: " + (err && err.message || "помилка"), "error");
           });
       });
       actions.appendChild(approveBtn);
-
-      // Reject button
-      var rejectBtn = document.createElement("button");
-      rejectBtn.type = "button";
-      rejectBtn.className = "glr-panel__reject-btn";
-      rejectBtn.innerHTML = SVG_CROSS + ' <span>Відхилити</span>';
-      rejectBtn.addEventListener("click", function () {
-        if (rejectBtn.disabled) return;
-        if (!alreadyApproved) return; // nothing to revoke
-        approveBtn.disabled = true;
-        rejectBtn.disabled = true;
-        ctx.api.revokeApproval(ctx.mrIid)
-          .then(function () {
-            showToast("Схвалення відкликано", "success");
-            if (ctx.onChange) ctx.onChange();
-          })
-          .catch(function (err) {
-            approveBtn.disabled = false;
-            rejectBtn.disabled = false;
-            showToast("Не вдалося: " + (err && err.message || "помилка"), "error");
-          });
-      });
-      actions.appendChild(rejectBtn);
 
       body.appendChild(actions);
     } else if (mr.state === "opened") {
