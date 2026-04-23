@@ -665,75 +665,6 @@
     return months + " міс";
   }
 
-  function startCardEdit(card, discussion, note) {
-    var textEl = card.querySelector(".glr-dashboard__card-text");
-    if (!textEl || textEl.dataset.editing) return;
-    textEl.dataset.editing = "1";
-
-    var originalText = textEl.textContent;
-    var originalBody = note.body || "";
-
-    // Replace text with textarea
-    var textarea = document.createElement("textarea");
-    textarea.className = "glr-dashboard__card-textarea";
-    textarea.value = originalBody;
-    textarea.addEventListener("click", function (e) { e.stopPropagation(); });
-
-    var actions = document.createElement("div");
-    actions.className = "glr-dashboard__card-edit-actions";
-
-    var saveBtn = document.createElement("button");
-    saveBtn.className = "glr-dashboard__card-save";
-    saveBtn.textContent = "Зберегти";
-
-    var cancelBtn = document.createElement("button");
-    cancelBtn.className = "glr-dashboard__card-cancel";
-    cancelBtn.textContent = "Скасувати";
-
-    actions.appendChild(saveBtn);
-    actions.appendChild(cancelBtn);
-
-    textEl.textContent = "";
-    textEl.style.display = "none";
-    card.insertBefore(textarea, textEl.nextSibling);
-    card.insertBefore(actions, textarea.nextSibling);
-    textarea.focus();
-
-    cancelBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      textarea.remove();
-      actions.remove();
-      textEl.textContent = originalText;
-      textEl.style.display = "";
-      delete textEl.dataset.editing;
-    });
-
-    saveBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      var newBody = textarea.value;
-      if (!newBody.trim()) return;
-      saveBtn.disabled = true;
-      saveBtn.textContent = "Збереження...";
-      cancelBtn.disabled = true;
-
-      window.GitlabAPI.editNote(state.mrIid, discussion.id, note.id, newBody)
-        .then(function () {
-          note.body = newBody;
-          var newPlain = stripFilePrefix(newBody).replace(/<[^>]+>/g, "").substring(0, 80);
-          textarea.remove();
-          actions.remove();
-          textEl.textContent = newPlain;
-          textEl.style.display = "";
-          delete textEl.dataset.editing;
-        })
-        .catch(function () {
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Зберегти";
-          cancelBtn.disabled = false;
-        });
-    });
-  }
-
   function renderCommentsDashboard() {
     // Remove old dashboard
     var old = document.getElementById("glr-dashboard");
@@ -821,19 +752,6 @@
       authorEl.className = "glr-dashboard__card-author";
       authorEl.textContent = authorName;
       cardTop.appendChild(authorEl);
-
-      // Edit button — only for own notes
-      if (state.lastMountUser && note.author && String(note.author.id) === String(state.lastMountUser.id)) {
-        var editBtn = document.createElement("button");
-        editBtn.className = "glr-dashboard__card-edit";
-        editBtn.title = "Редагувати";
-        editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-        editBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          startCardEdit(card, d, note);
-        });
-        cardTop.appendChild(editBtn);
-      }
 
       card.appendChild(cardTop);
 

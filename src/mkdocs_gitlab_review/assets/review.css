@@ -773,22 +773,6 @@
   white-space: nowrap;
 }
 
-.glr-dashboard__card-edit {
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-  padding: 0.15rem;
-  color: var(--md-default-fg-color--light, #666);
-}
-.glr-dashboard__card:hover .glr-dashboard__card-edit { opacity: 0.6; }
-.glr-dashboard__card-edit:hover { opacity: 1 !important; }
-
 .glr-dashboard__card-file {
   display: block;
   font-size: 0.7rem;
@@ -1174,7 +1158,6 @@
   }
   .glr-dashboard__card-avatar { width: 28px; height: 28px; }
   .glr-dashboard__card-avatar-wrap { width: 28px; height: 28px; }
-  .glr-dashboard__card-edit { opacity: 0.6; } /* always visible on mobile */
   .glr-dashboard__card-author { font-size: 0.85rem; }
   .glr-dashboard__card-text { font-size: 0.85rem; -webkit-line-clamp: 3; }
   .glr-dashboard__card-reaction {
