@@ -271,7 +271,7 @@
   }
 
   function renderAvatarRow(users, opts) {
-    // opts: {getStatus(user), onRemove(user), onAdd, api, emptyText, mandatoryUsernames}
+    // opts: {getStatus(user), onRemove(user), onAdd, api, emptyText, mandatoryUsernames, authorId}
     var row = document.createElement("div");
     row.className = "glr-panel__avatar-row";
 
@@ -284,13 +284,16 @@
       users.forEach(function (u) {
         var status = opts.getStatus ? opts.getStatus(u) : null;
         var isMandatory = opts.mandatoryUsernames && opts.mandatoryUsernames.has(u.username);
+        var isAuthor = opts.authorId != null && u.id === opts.authorId;
         var item = document.createElement("span");
         item.className = "glr-panel__avatar-item";
         if (status) item.classList.add("glr-panel__avatar-item--" + status);
         if (isMandatory) item.classList.add("glr-panel__avatar-item--mandatory");
+        if (isAuthor) item.classList.add("glr-panel__avatar-item--author");
 
         var tooltipName = u.name || u.username;
         var tooltipStatus = status === "approved" ? " — Схвалив" : status === "requested" ? " — Очікує" : "";
+        if (isAuthor) tooltipName += " (автор MR)";
         if (isMandatory) tooltipName += " (обов'язковий)";
         item.title = tooltipName + tooltipStatus;
 
@@ -313,8 +316,8 @@
           item.appendChild(badge);
         }
 
-        // Click avatar → small popover with remove option
-        if (opts.onRemove) {
+        // Click avatar → small popover with remove option (not for the MR author)
+        if (opts.onRemove && !isAuthor) {
           item.style.cursor = "pointer";
           item.addEventListener("click", function (e) {
             e.stopPropagation();
@@ -633,9 +636,21 @@
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
 
-    var row = renderAvatarRow(mr.assignees, {
+    // Build the combined list: author first, then remaining assignees (deduplicated)
+    var author = mr.author || null;
+    var assignees = mr.assignees || [];
+    var authorId = author ? author.id : null;
+
+    // Assignees minus the author (author is rendered first with a special badge)
+    var nonAuthorAssignees = assignees.filter(function (u) { return u.id !== authorId; });
+    var combined = author ? [author].concat(nonAuthorAssignees) : assignees.slice();
+
+    var row = renderAvatarRow(combined, {
       emptyText: "Не призначено",
+      authorId: authorId,
       onRemove: ctx && ctx.api ? function (a) {
+        // Don't allow removing the author (they can't be unassigned as MR author)
+        if (a.id === authorId) return;
         var remaining = mr.assignees.filter(function (u) { return u.id !== a.id; }).map(function (u) { return u.id; });
         ctx.api.setAssignees(ctx.mrIid, remaining).then(function () {
           if (ctx.onChange) ctx.onChange();
@@ -645,7 +660,9 @@
       } : null,
       onAdd: ctx && ctx.api ? function (user) {
         var ids = (mr.assignees || []).map(function (u) { return u.id; });
+        // Don't re-add if already an assignee or the author
         if (ids.indexOf(user.id) >= 0) return;
+        if (user.id === authorId) return;
         ids.push(user.id);
         ctx.api.setAssignees(ctx.mrIid, ids).then(function () {
           if (ctx.onChange) ctx.onChange();
