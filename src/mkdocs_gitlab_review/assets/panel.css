@@ -975,15 +975,25 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
     font-size: 1.3rem;
   }
 
-  .glr-panel__sheet .glr-panel__avatar-badge,
+  .glr-panel__sheet .glr-panel__avatar-item {
+    position: relative;
+  }
+
+  .glr-panel__sheet .glr-panel__avatar-badge {
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+    line-height: 14px;
+  }
+
   .glr-panel__sheet .glr-panel__avatar-item--mandatory::after,
   .glr-panel__sheet .glr-panel__avatar-item--author::after {
     width: 14px;
     height: 14px;
-    font-size: 8px;
+    font-size: 9px;
     line-height: 14px;
-    bottom: -2px;
-    right: -2px;
+    bottom: -3px;
+    right: -3px;
   }
 
   .glr-panel__member-popover {
