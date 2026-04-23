@@ -1308,6 +1308,17 @@
     var wrapper = document.createElement("div");
     wrapper.className = "glr-editor";
 
+    // Author identity bar
+    var currentUser = state.lastMountUser;
+    if (currentUser) {
+      var identityBar = document.createElement("div");
+      identityBar.className = "glr-editor__identity";
+      identityBar.innerHTML =
+        (currentUser.avatar_url ? '<img class="glr-editor__avatar" src="' + escapeHtml(currentUser.avatar_url) + '" />' : '') +
+        '<span class="glr-editor__author">' + escapeHtml(currentUser.name || currentUser.username) + '</span>';
+      wrapper.appendChild(identityBar);
+    }
+
     var editorContainer = document.createElement("div");
     editorContainer.className = "glr-editor__quill";
     wrapper.appendChild(editorContainer);

@@ -56,10 +56,16 @@
 
 .glr-threads {
   margin: 0.5rem 0 1rem;
-  padding: 0.75rem;
-  background: var(--md-code-bg-color, #f5f5f5);
-  border-radius: 0.3rem;
-  border-left: 3px solid var(--md-accent-fg-color, #536dfe);
+  padding: 0;
+  background: transparent;
+  border-left: none;
+  border-radius: 0.5rem;
+  animation: glr-slide-up 250ms ease-out;
+}
+
+@keyframes glr-slide-up {
+  from { opacity: 0; transform: translateY(0.75rem); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .glr-thread {
@@ -186,8 +192,33 @@
   overflow: hidden;
 }
 
+.glr-editor__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--md-default-fg-color, #000);
+}
+
+.glr-editor__avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
 .glr-editor__quill {
   background: var(--md-default-bg-color, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 0.5rem;
+  min-height: 80px;
+  transition: border-color 0.15s;
+}
+
+.glr-editor__quill:focus-within {
+  border-color: var(--md-primary-fg-color, #0d7377);
+  box-shadow: 0 0 0 2px rgba(13, 115, 119, 0.1);
 }
 
 /* Quill theme overrides */
@@ -232,19 +263,52 @@
   border-radius: 0.2rem;
 }
 
+.glr-editor__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0;
+}
+
+.glr-editor__actions .glr-editor__submit {
+  margin-left: auto;
+  background: var(--md-primary-fg-color, #0d7377);
+  color: #fff;
+  border: 0;
+  border-radius: 0.375rem;
+  padding: 0.4rem 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.glr-editor__actions .glr-editor__submit:hover {
+  background: #0a5e61;
+}
+
+.glr-editor__actions .glr-editor__submit:active {
+  transform: scale(0.97);
+}
+
 .glr-form__submit {
   margin-top: 0.3rem;
   padding: 0.3rem 0.8rem;
-  background: var(--md-primary-fg-color, #4051b5);
+  background: var(--md-primary-fg-color, #0d7377);
   color: #fff;
   border: none;
-  border-radius: 0.2rem;
+  border-radius: 0.375rem;
   font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
 }
 
 .glr-form__submit:hover {
-  opacity: 0.9;
+  background: #0a5e61;
+}
+
+.glr-form__submit:active {
+  transform: scale(0.97);
 }
 
 .glr-form__submit:disabled {
