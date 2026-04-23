@@ -398,8 +398,17 @@
       });
       li.appendChild(checkbox);
       var statusIcon = { added: "●", modified: "◐", deleted: "✕", renamed: "→" }[safeStatus];
+      var fileName = f.path.split("/").pop();
+      var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
+      var pageUrl = pageMap[f.path];
+      var pathTag;
+      if (pageUrl) {
+        pathTag = '<a class="glr-panel__file-path" href="' + escapeHtml((config.site_url || "") + pageUrl) + '" title="' + escapeHtml(f.path) + '">' + escapeHtml(fileName) + '</a>';
+      } else {
+        pathTag = '<span class="glr-panel__file-path" title="' + escapeHtml(f.path) + '">' + escapeHtml(fileName) + '</span>';
+      }
       var labelHtml = ' <span class="glr-panel__file-status">' + statusIcon + '</span>' +
-        ' <span class="glr-panel__file-path">' + escapeHtml(f.path) + '</span>' +
+        ' ' + pathTag +
         ' <span class="glr-panel__file-stats">' +
         '<span class="glr-panel__additions">+' + additions + '</span> ' +
         '<span class="glr-panel__deletions">−' + deletions + '</span>' +
