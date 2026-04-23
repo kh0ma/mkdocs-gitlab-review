@@ -231,6 +231,14 @@
   // -------- Block renderers --------
   // Each returns a DOM node (full block body).
 
+  var SVG_CHECK = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M5 10.5L8.5 14L15 6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+
+  var SVG_CROSS = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+
   function renderAvatarRow(users, opts) {
     // opts: {getStatus(user), onRemove(user), onAdd, api, emptyText}
     var row = document.createElement("div");
@@ -326,7 +334,6 @@
     var approvedUsernames = new Set(
       (ctx && ctx.approvals && ctx.approvals.approved_by || []).map(function (u) { return u.username; })
     );
-
     var row = renderAvatarRow(mr.reviewers, {
       emptyText: "Рецензентів не призначено",
       getStatus: function (r) {
@@ -363,57 +370,72 @@
     var approved = (approvals.approved_by || []);
     var required = Number(approvals.required) || 0;
 
-    var html = "";
-    if (required === 0 && (!approvals.rules || approvals.rules.length === 0)) {
-      html += '<p class="glr-panel__empty">Правила схвалення не налаштовані</p>';
-    } else {
-      html += '<p class="glr-panel__approvals-counter"><strong>' +
-        (Number(approved.length) || 0) + '</strong> з <strong>' + required + '</strong> схвалень</p>';
-      if (approvals.rules && approvals.rules.length > 0) {
-        html += '<ul class="glr-panel__rule-list">';
-        approvals.rules.forEach(function (rule) {
-          var ruleApproved = (rule.approved_by || []).length;
-          var ruleReq = Number(rule.approvals_required) || 0;
-          html += '<li class="glr-panel__rule">' +
-            '<span class="glr-panel__rule-name">' + escapeHtml(rule.name) + '</span>' +
-            ' <span class="glr-panel__rule-count">' + ruleApproved + '/' + ruleReq + '</span>' +
-            '</li>';
-        });
-        html += '</ul>';
-      }
+    // Summary row: show approval count if there are rules/required approvals
+    if (required > 0 || (approvals.rules && approvals.rules.length > 0)) {
+      var summary = document.createElement("p");
+      summary.className = "glr-panel__approvals-counter";
+      summary.innerHTML = '<span class="glr-panel__approvals-counter-icon">' + SVG_CHECK + '</span> ' +
+        '<strong>' + (Number(approved.length) || 0) + '</strong>/' +
+        '<strong>' + required + '</strong> схвалено';
+      body.appendChild(summary);
     }
 
-    body.innerHTML = html;
-
-    // Interactive Approve / Revoke (only for open MRs)
+    // Interactive Approve / Reject buttons (only for open MRs)
     if (ctx && ctx.api && ctx.currentUser && mr.state === "opened") {
       var alreadyApproved = approved.some(function (u) {
         return u.username === ctx.currentUser.username;
       });
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "glr-panel__approve-btn";
-      btn.textContent = alreadyApproved ? "Відкликати схвалення" : "Схвалити";
-      if (alreadyApproved) btn.classList.add("glr-panel__approve-btn--approved");
-      btn.addEventListener("click", function () {
-        if (btn.disabled) return;
-        var wasApproved = alreadyApproved;
-        btn.disabled = true;
-        btn.textContent = wasApproved ? "Відкликання…" : "Схвалення…";
-        var call = wasApproved ? ctx.api.revokeApproval(ctx.mrIid) : ctx.api.approve(ctx.mrIid);
+
+      var actions = document.createElement("div");
+      actions.className = "glr-panel__approval-actions";
+
+      // Approve button
+      var approveBtn = document.createElement("button");
+      approveBtn.type = "button";
+      approveBtn.className = "glr-panel__approve-btn" + (alreadyApproved ? " glr-panel__approve-btn--active" : "");
+      approveBtn.innerHTML = SVG_CHECK + ' <span>' + (alreadyApproved ? "Схвалено" : "Схвалити") + '</span>';
+      approveBtn.addEventListener("click", function () {
+        if (approveBtn.disabled) return;
+        approveBtn.disabled = true;
+        rejectBtn.disabled = true;
+        var call = alreadyApproved ? ctx.api.revokeApproval(ctx.mrIid) : ctx.api.approve(ctx.mrIid);
         call
           .then(function () {
-            showToast(wasApproved ? "Схвалення відкликано" : "Схвалено", "success");
+            showToast(alreadyApproved ? "Схвалення відкликано" : "Схвалено", "success");
             if (ctx.onChange) ctx.onChange();
           })
           .catch(function (err) {
-            // Rollback
-            btn.disabled = false;
-            btn.textContent = wasApproved ? "Відкликати схвалення" : "Схвалити";
+            approveBtn.disabled = false;
+            rejectBtn.disabled = false;
             showToast("Не вдалося: " + (err && err.message || "помилка"), "error");
           });
       });
-      body.appendChild(btn);
+      actions.appendChild(approveBtn);
+
+      // Reject button
+      var rejectBtn = document.createElement("button");
+      rejectBtn.type = "button";
+      rejectBtn.className = "glr-panel__reject-btn";
+      rejectBtn.innerHTML = SVG_CROSS + ' <span>Відхилити</span>';
+      rejectBtn.addEventListener("click", function () {
+        if (rejectBtn.disabled) return;
+        if (!alreadyApproved) return; // nothing to revoke
+        approveBtn.disabled = true;
+        rejectBtn.disabled = true;
+        ctx.api.revokeApproval(ctx.mrIid)
+          .then(function () {
+            showToast("Схвалення відкликано", "success");
+            if (ctx.onChange) ctx.onChange();
+          })
+          .catch(function (err) {
+            approveBtn.disabled = false;
+            rejectBtn.disabled = false;
+            showToast("Не вдалося: " + (err && err.message || "помилка"), "error");
+          });
+      });
+      actions.appendChild(rejectBtn);
+
+      body.appendChild(actions);
     } else if (mr.state === "opened") {
       // Fallback: link to GitLab (when no currentUser provided)
       var a = document.createElement("a");

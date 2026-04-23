@@ -119,11 +119,11 @@ describe("ReviewPanel — data fetching", () => {
     expect(block.textContent).toContain("andriy");
   });
 
-  it("approvals block renders 'N of M' counter", async () => {
+  it("approvals block renders 'N/M схвалено' counter", async () => {
     window.ReviewPanel.mount(container, { mrIid: 7, api });
     await new Promise(r => setTimeout(r, 10));
     const block = container.querySelector('[data-block="approvals"]');
-    expect(block.textContent).toMatch(/1.*of.*2/i);
+    expect(block.textContent).toMatch(/1.*\/.*2.*схвалено/);
   });
 
   it("files block renders file list with +/- stats", async () => {
@@ -256,16 +256,18 @@ describe("ReviewPanel — Approve interactivity", () => {
     loadAsset("src/mkdocs_gitlab_review/assets/panel.js");
   });
 
-  it("Approvals block has a real button when opts.currentUser set", async () => {
+  it("Approvals block has approve and reject buttons when opts.currentUser set", async () => {
     window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
     await new Promise(r => setTimeout(r, 10));
     const block = container.querySelector('[data-block="approvals"]');
-    const btn = block.querySelector("button.glr-panel__approve-btn");
-    expect(btn).not.toBeNull();
-    expect(btn.textContent).toMatch(/approve/i);
+    const approveBtn = block.querySelector("button.glr-panel__approve-btn");
+    const rejectBtn = block.querySelector("button.glr-panel__reject-btn");
+    expect(approveBtn).not.toBeNull();
+    expect(rejectBtn).not.toBeNull();
+    expect(approveBtn.textContent).toContain("Схвалити");
   });
 
-  it("clicking Approve calls api.approve and flips to Revoke on success", async () => {
+  it("clicking Approve calls api.approve and shows active state on success", async () => {
     window.ReviewPanel.mount(container, { mrIid: 7, api, currentUser: { username: "me" } });
     await new Promise(r => setTimeout(r, 10));
     const btn = container.querySelector("button.glr-panel__approve-btn");
@@ -273,7 +275,8 @@ describe("ReviewPanel — Approve interactivity", () => {
     await new Promise(r => setTimeout(r, 20));
     expect(api.approve).toHaveBeenCalledWith(7);
     const btnAfter = container.querySelector("button.glr-panel__approve-btn");
-    expect(btnAfter.textContent).toMatch(/revoke/i);
+    expect(btnAfter.classList.contains("glr-panel__approve-btn--active")).toBe(true);
+    expect(btnAfter.textContent).toContain("Схвалено");
   });
 
   it("failed Approve rolls back UI and shows error toast", async () => {
@@ -283,9 +286,9 @@ describe("ReviewPanel — Approve interactivity", () => {
     const btn = container.querySelector("button.glr-panel__approve-btn");
     btn.click();
     await new Promise(r => setTimeout(r, 20));
-    // Button back to "Approve" (not "Revoke") after rollback
+    // Button back to non-active state after rollback
     const btnAfter = container.querySelector("button.glr-panel__approve-btn");
-    expect(btnAfter.textContent).toMatch(/approve/i);
+    expect(btnAfter.disabled).toBe(false);
     // Toast visible
     expect(document.querySelector(".glr-toast--error")).not.toBeNull();
   });
