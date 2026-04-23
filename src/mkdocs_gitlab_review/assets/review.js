@@ -177,6 +177,7 @@
             mrIid: state.mrIid,
             api: window.GitlabAPI,
             currentUser: user,
+            currentFile: state.currentFile,
           });
         })
         .catch(function () {
@@ -184,6 +185,7 @@
           state.panelHandle = window.ReviewPanel.mount(rail, {
             mrIid: state.mrIid,
             api: window.GitlabAPI,
+            currentFile: state.currentFile,
           });
         });
     });
@@ -210,7 +212,7 @@
       el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
         "glr-block--added", "glr-block--context");
     });
-    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, #glr-share-dialog, .glr-block--deleted").forEach(function (el) {
+    document.querySelectorAll(".glr-action-btn, .glr-threads, #glr-dashboard, #glr-share-dialog, .glr-block--deleted").forEach(function (el) {
       el.remove();
     });
     // Remove share button wrapper
@@ -495,7 +497,7 @@
     // Guard: remove any existing overlay elements before re-rendering.
     // Rapid toggle cycles can cause overlapping async renderOverlay calls;
     // clearing first prevents duplicate dashboard entries and action buttons.
-    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, .glr-block--deleted").forEach(function (el) {
+    document.querySelectorAll(".glr-action-btn, .glr-threads, #glr-dashboard, .glr-block--deleted").forEach(function (el) {
       el.remove();
     });
     document.querySelectorAll(".glr-block").forEach(function (el) {
@@ -576,9 +578,6 @@
     if (isChanged && fileInfo.deletedLines && fileInfo.deletedLines.length > 0) {
       insertDeletedBlocks(fileInfo.deletedLines);
     }
-
-    // Render file status banner
-    renderFileStatus(isChanged);
 
     // Render comments dashboard panel
     renderCommentsDashboard();
@@ -710,7 +709,7 @@
     panel.appendChild(list);
 
     var content = document.querySelector(".md-content__inner");
-    if (content) content.insertBefore(panel, content.querySelector(".glr-file-status"));
+    if (content) content.insertBefore(panel, content.firstChild);
   }
 
   function insertDeletedBlocks(deletedLines) {
@@ -758,19 +757,6 @@
     return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
   }
 
-  function renderFileStatus(isChanged) {
-    var banner = document.createElement("div");
-    banner.className = "glr-file-status";
-    if (isChanged) {
-      banner.classList.add("glr-file-status--changed");
-      banner.textContent = "Файл змінено в цьому MR";
-    } else {
-      banner.classList.add("glr-file-status--unchanged");
-      banner.textContent = "Файл не змінено в цьому MR";
-    }
-    var content = document.querySelector(".md-content__inner");
-    if (content) content.insertBefore(banner, content.firstChild);
-  }
 
   // --- Thread UI ---
 

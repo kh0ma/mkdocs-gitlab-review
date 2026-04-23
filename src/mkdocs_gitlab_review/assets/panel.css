@@ -335,6 +335,10 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 
 .glr-panel__file--added .glr-panel__file-path { color: #116329; /* WCAG AA 4.5:1+ on white */ }
 .glr-panel__file--deleted .glr-panel__file-path { color: #cf222e; text-decoration: line-through; }
+.glr-panel__file--active {
+  background: rgba(13, 115, 119, 0.08);
+  border-radius: 0.25rem;
+}
 
 .glr-panel__state-badge {
   display: inline-block;

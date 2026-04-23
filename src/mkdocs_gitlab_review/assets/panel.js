@@ -385,8 +385,8 @@
 
     body.innerHTML = html;
 
-    // Interactive Approve / Revoke
-    if (ctx && ctx.api && ctx.currentUser) {
+    // Interactive Approve / Revoke (only for open MRs)
+    if (ctx && ctx.api && ctx.currentUser && mr.state === "opened") {
       var alreadyApproved = approved.some(function (u) {
         return u.username === ctx.currentUser.username;
       });
@@ -414,7 +414,7 @@
           });
       });
       body.appendChild(btn);
-    } else {
+    } else if (mr.state === "opened") {
       // Fallback: link to GitLab (when no currentUser provided)
       var a = document.createElement("a");
       a.className = "glr-panel__action-link glr-panel__action-link--primary";
@@ -496,9 +496,17 @@
       var span = document.createElement("span");
       span.innerHTML = labelHtml;
       li.appendChild(span);
+      if (ctx && ctx.currentFile && f.path === ctx.currentFile) {
+        li.classList.add("glr-panel__file--active");
+      }
       ul.appendChild(li);
     });
     body.appendChild(ul);
+    // Scroll the active file into view after the list is rendered
+    requestAnimationFrame(function () {
+      var active = ul.querySelector(".glr-panel__file--active");
+      if (active) active.scrollIntoView({ block: "nearest" });
+    });
     return body;
   }
 
@@ -547,7 +555,7 @@
       // Merge button (primary)
       var mergeBtn = document.createElement("button");
       mergeBtn.type = "button";
-      mergeBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--primary";
+      mergeBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--primary glr-panel__merge-btn";
       mergeBtn.textContent = "Злити MR";
 
       var disabledReasons = [];
@@ -587,7 +595,7 @@
       // Close button (secondary / danger)
       var closeBtn = document.createElement("button");
       closeBtn.type = "button";
-      closeBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--danger";
+      closeBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--danger glr-panel__close-btn";
       closeBtn.textContent = "Закрити MR";
       closeBtn.addEventListener("click", function () {
         if (closeBtn.disabled) return;
@@ -620,49 +628,43 @@
       mergedBadge.textContent = "Злито";
       body.appendChild(mergedBadge);
 
-      if (mr.source_branch && ctx && ctx.api) {
-        var delBtn = document.createElement("button");
-        delBtn.type = "button";
-        delBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--danger";
-        delBtn.textContent = "Видалити гілку (" + mr.source_branch + ")";
-        delBtn.addEventListener("click", function () {
-          if (delBtn.disabled) return;
-          delBtn.disabled = true;
-          confirmDialog({
-            title: "Видалити гілку?",
-            body: "Гілка '" + mr.source_branch + "' буде видалена з origin. Дію неможливо відмінити.",
-            confirmLabel: "Видалити",
-            danger: true,
-          }).then(function (result) {
-            if (!result) {
-              delBtn.disabled = false;
-              return;
-            }
-            delBtn.textContent = "Видалення…";
-            ctx.api.deleteSourceBranch(mr.source_branch).then(function () {
-              showToast("Гілку видалено", "success");
-              delBtn.remove();
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              delBtn.disabled = false;
-              delBtn.textContent = "Видалити гілку (" + mr.source_branch + ")";
-              showToast("Видалення не вдалось: " + (err && err.message || "помилка"), "error");
-            });
-          });
-        });
-        body.appendChild(delBtn);
-      }
+      var mergedLink = document.createElement("a");
+      mergedLink.className = "glr-panel__action-link glr-panel__action-link--secondary";
+      mergedLink.href = mrWebUrl(mr.iid);
+      mergedLink.textContent = "Переглянути в GitLab";
+      body.appendChild(mergedLink);
     } else if (mr.state === "closed") {
       var closedBadge = document.createElement("span");
       closedBadge.className = "glr-panel__state-badge glr-panel__state-badge--closed";
       closedBadge.textContent = "Закрито";
       body.appendChild(closedBadge);
 
-      var openLink = document.createElement("a");
-      openLink.className = "glr-panel__actions-btn";
-      openLink.href = mrWebUrl(mr.iid);
-      openLink.textContent = "Відкрити в GitLab";
-      body.appendChild(openLink);
+      var closedLink = document.createElement("a");
+      closedLink.className = "glr-panel__action-link glr-panel__action-link--secondary";
+      closedLink.href = mrWebUrl(mr.iid);
+      closedLink.textContent = "Переглянути в GitLab";
+      body.appendChild(closedLink);
+
+      if (ctx && ctx.api && ctx.api.reopenMR) {
+        var reopenBtn = document.createElement("button");
+        reopenBtn.type = "button";
+        reopenBtn.className = "glr-panel__actions-btn";
+        reopenBtn.textContent = "Відкрити знову";
+        reopenBtn.addEventListener("click", function () {
+          if (reopenBtn.disabled) return;
+          reopenBtn.disabled = true;
+          reopenBtn.textContent = "Відкриття…";
+          ctx.api.reopenMR(ctx.mrIid).then(function () {
+            showToast("MR відкрито знову", "success");
+            if (ctx.onChange) ctx.onChange();
+          }).catch(function (err) {
+            reopenBtn.disabled = false;
+            reopenBtn.textContent = "Відкрити знову";
+            showToast("Не вдалося відкрити: " + (err && err.message || "помилка"), "error");
+          });
+        });
+        body.appendChild(reopenBtn);
+      }
     }
     return body;
   }
@@ -907,7 +909,7 @@
           var files = results[1];
           var viewed = api.getViewedFiles ? api.getViewedFiles(mrIid) : new Set();
           replaceBody(blockEls.files, renderFilesBlock(files, viewed, mrForSha || { diff_refs: {} }, {
-            api: api, mrIid: mrIid,
+            api: api, mrIid: mrIid, currentFile: opts.currentFile,
           }));
           updateChipValue("files", String((files || []).length));
         })
