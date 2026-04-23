@@ -840,9 +840,17 @@
       // File link
       var fileLink = document.createElement("a");
       fileLink.className = "glr-dashboard__card-file";
-      fileLink.textContent = fileName;
-      fileLink.href = "#";
-      fileLink.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); });
+      if (isLocalFile) {
+        fileLink.textContent = fileName;
+        fileLink.href = "#";
+        fileLink.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); });
+      } else {
+        fileLink.href = gitlabDiffsUrl;
+        fileLink.target = "_blank";
+        fileLink.rel = "noopener";
+        fileLink.innerHTML = escapeHtml(fileName) + ' <svg class="glr-dashboard__card-ext-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+        fileLink.addEventListener("click", function (e) { e.stopPropagation(); });
+      }
       card.appendChild(fileLink);
 
       // Comment text
@@ -922,22 +930,27 @@
         card.appendChild(reactions);
       }
 
-      // Click card → scroll to inline thread
-      card.addEventListener("click", function () {
-        var selector = '[data-source-file="' + file + '"][data-source-line="' + line + '"]';
-        scrollToInlineComment(selector, function notFound() {
-          var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
-          var pageUrl = pageMap[file];
-          var currentBase = getCurrentSiteBase();
-          if (pageUrl !== undefined) {
-            window.location.href = currentBase + pageUrl + "?review#glr-line-" + line;
-          } else {
-            var pagePath = file.replace(/\.md$/, "/").replace(/^index\/$/, "");
-            if (pagePath.indexOf("/") === -1) pagePath = pagePath.toLowerCase();
-            window.location.href = currentBase + pagePath + "?review#glr-line-" + line;
-          }
+      // Click card → scroll to inline thread (local) or open GitLab (non-local)
+      if (isLocalFile) {
+        card.addEventListener("click", function () {
+          var selector = '[data-source-file="' + file + '"][data-source-line="' + line + '"]';
+          scrollToInlineComment(selector, function notFound() {
+            var pageUrl = pageMap[file];
+            var currentBase = getCurrentSiteBase();
+            if (pageUrl !== undefined) {
+              window.location.href = currentBase + pageUrl + "?review#glr-line-" + line;
+            } else {
+              var pagePath = file.replace(/\.md$/, "/").replace(/^index\/$/, "");
+              if (pagePath.indexOf("/") === -1) pagePath = pagePath.toLowerCase();
+              window.location.href = currentBase + pagePath + "?review#glr-line-" + line;
+            }
+          });
         });
-      });
+      } else {
+        card.addEventListener("click", function () {
+          window.open(gitlabDiffsUrl, "_blank", "noopener");
+        });
+      }
 
       grid.appendChild(card);
     });
