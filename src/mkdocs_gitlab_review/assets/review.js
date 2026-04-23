@@ -612,8 +612,8 @@
       // Click the block itself to toggle comments — no floating button needed
       block.style.cursor = "pointer";
       block.addEventListener("click", function (e) {
-        // Don't trigger on clicks inside threads or editors
-        if (e.target.closest(".glr-threads, .glr-form, .glr-editor__quill, .ql-editor")) return;
+        // Don't trigger on clicks inside threads, editors, or interactive elements
+        if (e.target.closest(".glr-threads, .glr-form, .glr-editor, .ql-editor, .ql-toolbar, a, button, input, textarea")) return;
         var existing = block.nextElementSibling;
         if (existing && existing.classList.contains("glr-threads")) {
           existing.remove();
@@ -948,7 +948,9 @@
         });
       } else {
         card.addEventListener("click", function () {
-          window.open(gitlabDiffsUrl, "_blank", "noopener");
+          // Navigate to the specific note in GitLab (not just the diff view)
+          var noteUrl = gitlabDiffsUrl + "#note_" + note.id;
+          window.open(noteUrl, "_blank", "noopener");
         });
       }
 
