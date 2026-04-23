@@ -10,6 +10,22 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
   display: none !important;
 }
 
+/* Ensure the secondary sidebar stays sticky in flex layouts.
+   MkDocs Material uses a flex container for the main grid; without
+   align-self:flex-start the sidebar stretches to the container height
+   which defeats position:sticky. */
+body.glr-review-on .md-sidebar--secondary {
+  position: sticky;
+  top: var(--md-header-height, 3.6rem);
+  align-self: flex-start;
+  max-height: calc(100vh - var(--md-header-height, 3.6rem));
+  overflow: visible;
+}
+
+body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
+  overflow: visible;
+}
+
 .glr-panel {
   display: flex;
   flex-direction: column;
@@ -29,7 +45,7 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
   scrollbar-width: thin;
   /* Stick to top of sidebar so panel scrolls independently of page content. */
   position: sticky;
-  top: 4.5rem; /* below MkDocs Material header (~3.8rem + margin) */
+  top: 0;
 }
 
 .glr-panel::-webkit-scrollbar { width: 6px; }
@@ -53,7 +69,7 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
 }
 
 .glr-panel__block-header {
-  padding: 0.5rem 0.75rem 0.25rem;
+  padding: 0.45rem 0.75rem 0.25rem;
 }
 
 .glr-panel__block-title {
@@ -289,6 +305,7 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
 .glr-panel__file-list {
   max-height: 12rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
 }
 
@@ -297,24 +314,16 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
   font-size: 0.78rem;
 }
 
-.glr-panel__file-status {
-  flex: none;
-  width: 1.1rem;
-  height: 1.1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.2rem;
-  font-size: 0.65rem;
+.glr-panel__file-status--inline {
+  font-size: 0.6rem;
   font-weight: 700;
-  line-height: 1;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.35);
+  margin-right: 0.25rem;
+  color: rgba(0, 0, 0, 0.45);
 }
-.glr-panel__file-status--added { background: #1f883d; }
-.glr-panel__file-status--deleted { background: #cf222e; }
-.glr-panel__file-status--renamed { background: #8250df; }
-.glr-panel__file-status--modified { background: #d97706; }
+.glr-panel__file-status--inline.glr-panel__file-status--added { color: #1f883d; }
+.glr-panel__file-status--inline.glr-panel__file-status--deleted { color: #cf222e; }
+.glr-panel__file-status--inline.glr-panel__file-status--renamed { color: #8250df; }
+.glr-panel__file-status--inline.glr-panel__file-status--modified { color: #d97706; }
 
 .glr-panel__file-path { flex: 1; font-family: ui-monospace, monospace; font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .glr-panel__file-stats { flex: none; font-size: 0.72rem; }
@@ -591,7 +600,8 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 
 .glr-panel__member-popover {
   z-index: 10500;
-  max-width: min(18rem, calc(100% - 0.5rem));
+  width: 16rem;
+  max-width: calc(100vw - 1rem);
   box-sizing: border-box;
   background: var(--md-default-bg-color, #fff);
   border: 1px solid rgba(0, 0, 0, 0.1);

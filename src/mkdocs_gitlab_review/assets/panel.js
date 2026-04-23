@@ -113,19 +113,26 @@
     pop.innerHTML =
       '<input type="text" class="glr-panel__member-popover__input" placeholder="Пошук користувача…" />' +
       '<ul class="glr-panel__member-popover__list" role="listbox"></ul>';
-    // Position relative to the closest .glr-panel__block (or body as fallback)
-    var block = anchor.closest(".glr-panel__block") || anchor.closest(".glr-panel") || document.body;
-    if (block !== document.body && getComputedStyle(block).position === "static") {
-      block.style.position = "relative";
-    }
-    block.appendChild(pop);
-    pop.style.position = "absolute";
-    pop.style.left = "0.75rem";
-    pop.style.right = "0.75rem";
-    // Place below anchor
-    var blockRect = block.getBoundingClientRect();
+    // Append to body with position:fixed to escape overflow:auto containers
+    document.body.appendChild(pop);
+    pop.style.position = "fixed";
+    pop.style.zIndex = "10500";
     var anchorRect = anchor.getBoundingClientRect();
-    pop.style.top = (anchorRect.bottom - blockRect.top + 4) + "px";
+    var popTop = anchorRect.bottom + 4;
+    var popLeft = anchorRect.left;
+    // Flip above trigger if it would go below viewport
+    pop.style.top = popTop + "px";
+    pop.style.left = popLeft + "px";
+    // After rendering, adjust if overflowing viewport
+    requestAnimationFrame(function () {
+      var popRect = pop.getBoundingClientRect();
+      if (popRect.bottom > window.innerHeight) {
+        pop.style.top = (anchorRect.top - popRect.height - 4) + "px";
+      }
+      if (popRect.right > window.innerWidth) {
+        pop.style.left = (window.innerWidth - popRect.width - 8) + "px";
+      }
+    });
 
     var input = pop.querySelector(".glr-panel__member-popover__input");
     var list = pop.querySelector(".glr-panel__member-popover__list");
@@ -484,8 +491,8 @@
           (deletions > 0 ? '<span class="glr-panel__deletions">−' + deletions + '</span>' : '') +
           '</span>';
       }
-      var labelHtml = ' <span class="glr-panel__file-status glr-panel__file-status--' + safeStatus + '">' + statusLetter + '</span>' +
-        ' ' + pathTag + statsHtml;
+      var labelHtml = '<span class="glr-panel__file-status--inline glr-panel__file-status--' + safeStatus + '">' + statusLetter + '</span>' +
+        pathTag + statsHtml;
       var span = document.createElement("span");
       span.innerHTML = labelHtml;
       li.appendChild(span);
@@ -537,18 +544,6 @@
       openBadge.textContent = "Відкрито";
       body.appendChild(openBadge);
 
-      // Delete-branch toggle
-      var deleteBranch = true;
-      var delToggle = document.createElement("label");
-      delToggle.className = "glr-panel__actions-toggle";
-      var delCheckbox = document.createElement("input");
-      delCheckbox.type = "checkbox";
-      delCheckbox.checked = deleteBranch;
-      delCheckbox.addEventListener("change", function () { deleteBranch = delCheckbox.checked; });
-      delToggle.appendChild(delCheckbox);
-      delToggle.appendChild(document.createTextNode(" Видалити гілку після злиття"));
-      body.appendChild(delToggle);
-
       // Merge button (primary)
       var mergeBtn = document.createElement("button");
       mergeBtn.type = "button";
@@ -577,7 +572,7 @@
         mergeBtn.textContent = "Злиття…";
         ctx.api.mergeMR(ctx.mrIid, {
           sha: mr.diff_refs && mr.diff_refs.head_sha,
-          shouldRemoveSourceBranch: deleteBranch,
+          shouldRemoveSourceBranch: true,
         }).then(function () {
           showToast("MR замерджено", "success");
           if (ctx.onChange) ctx.onChange();
