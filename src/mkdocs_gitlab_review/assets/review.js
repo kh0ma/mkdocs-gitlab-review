@@ -917,6 +917,41 @@
 
       card.appendChild(meta);
 
+      // Reactions per card (thumbsup + one random)
+      if (state.lastMountUser) {
+        var reactions = document.createElement("div");
+        reactions.className = "glr-dashboard__card-reactions";
+        var CARD_EMOJIS = { thumbsup: "\uD83D\uDC4D", rocket: "\uD83D\uDE80", tada: "\uD83C\uDF89", heart: "\u2764\uFE0F" };
+        var RANDOM_PICK = ["rocket", "tada", "heart"];
+        var secondEmoji = RANDOM_PICK[Math.floor(Math.random() * RANDOM_PICK.length)];
+        var cardEmojiNames = ["thumbsup", secondEmoji];
+
+        cardEmojiNames.forEach(function (emojiName) {
+          var reactionBtn = document.createElement("button");
+          reactionBtn.type = "button";
+          reactionBtn.className = "glr-dashboard__card-reaction";
+          reactionBtn.textContent = CARD_EMOJIS[emojiName] || emojiName;
+          reactionBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (reactionBtn.disabled) return;
+            reactionBtn.disabled = true;
+            window.GitlabAPI.toggleNoteEmoji(state.mrIid, note.id, emojiName, state.lastMountUser.id)
+              .then(function (result) {
+                reactionBtn.disabled = false;
+                if (result.action === "added") {
+                  reactionBtn.classList.add("glr-dashboard__card-reaction--active");
+                } else {
+                  reactionBtn.classList.remove("glr-dashboard__card-reaction--active");
+                }
+              })
+              .catch(function () { reactionBtn.disabled = false; });
+          });
+          reactions.appendChild(reactionBtn);
+        });
+
+        card.appendChild(reactions);
+      }
+
       // Click card → scroll to inline thread
       card.addEventListener("click", function () {
         var selector = '[data-source-file="' + file + '"][data-source-line="' + line + '"]';
