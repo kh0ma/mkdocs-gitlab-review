@@ -27,6 +27,9 @@ body.glr-review-on .md-sidebar--secondary .md-nav[data-md-level="0"] {
   max-height: calc(100vh - 6rem);
   /* Subtle thin scrollbar so it doesn't clash with the clean UI. */
   scrollbar-width: thin;
+  /* Stick to top of sidebar so panel scrolls independently of page content. */
+  position: sticky;
+  top: 4.5rem; /* below MkDocs Material header (~3.8rem + margin) */
 }
 
 .glr-panel::-webkit-scrollbar { width: 6px; }
