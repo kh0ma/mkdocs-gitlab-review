@@ -72,6 +72,9 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
 }
 
 .glr-panel__block-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
   padding: 0.45rem 0.75rem 0.25rem;
 }
 
@@ -82,6 +85,14 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: rgba(0, 0, 0, 0.75); /* WCAG AA 4.5:1+ on white */
+}
+
+.glr-panel__block-subtitle {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
 }
 
 .glr-panel__block-body {

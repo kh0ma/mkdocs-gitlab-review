@@ -506,10 +506,8 @@
       if (viewed.has(f.path + ":" + headSha)) viewedCount++;
     });
 
-    var summary = document.createElement("p");
-    summary.className = "glr-panel__files-count";
-    summary.innerHTML = '<strong>' + viewedCount + '</strong> з <strong>' + files.length + '</strong> переглянуто';
-    body.appendChild(summary);
+    // Store subtitle text for the block header (set after replaceBody)
+    body.__subtitleText = viewedCount + ' з ' + files.length + ' переглянуто';
 
     var ul = document.createElement("ul");
     ul.className = "glr-panel__file-list";
@@ -529,9 +527,13 @@
       checkbox.addEventListener("change", function () {
         if (ctx && ctx.api && ctx.api.markFileViewed && checkbox.checked) {
           ctx.api.markFileViewed(ctx.mrIid, f.path, headSha);
-          var newCount = viewedCount + 1;
-          summary.innerHTML = '<strong>' + newCount + '</strong> з <strong>' + files.length + '</strong> переглянуто';
-          viewedCount = newCount;
+          viewedCount++;
+          // Update the subtitle in the block header
+          var block = body.closest ? body.closest(".glr-panel__block") : body.parentNode;
+          if (block) {
+            var sub = block.querySelector(".glr-panel__block-subtitle");
+            if (sub) sub.textContent = viewedCount + ' з ' + files.length + ' переглянуто';
+          }
         }
       });
       li.appendChild(checkbox);
@@ -744,6 +746,7 @@
     el.innerHTML =
       '<header class="glr-panel__block-header">' +
       '<h3 class="glr-panel__block-title">' + def.title + '</h3>' +
+      '<span class="glr-panel__block-subtitle"></span>' +
       '</header>';
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
@@ -756,6 +759,11 @@
     var old = blockEl.querySelector(".glr-panel__block-body");
     if (old) blockEl.replaceChild(newBody, old);
     else blockEl.appendChild(newBody);
+    // Update block header subtitle if the body provides one
+    if (newBody.__subtitleText) {
+      var sub = blockEl.querySelector(".glr-panel__block-subtitle");
+      if (sub) sub.textContent = newBody.__subtitleText;
+    }
   }
 
   function wrapError(errEl) {
