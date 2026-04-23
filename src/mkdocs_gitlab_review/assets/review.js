@@ -271,6 +271,27 @@
       .catch(function () { return null; });
   }
 
+  function scrollToInlineComment(selector, onNotFound, attempts) {
+    attempts = attempts || 0;
+    var target = document.querySelector(selector);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      var next = target.nextElementSibling;
+      if (!next || !next.classList.contains("glr-threads")) {
+        var actionBtn = target.querySelector(".glr-action-btn");
+        if (actionBtn) actionBtn.click();
+      }
+      target.style.outline = "2px solid var(--md-accent-fg-color, #536dfe)";
+      setTimeout(function () { target.style.outline = ""; }, 2000);
+      return;
+    }
+    if (attempts < 10) {
+      setTimeout(function () { scrollToInlineComment(selector, onNotFound, attempts + 1); }, 150);
+    } else if (onNotFound) {
+      onNotFound();
+    }
+  }
+
   function scrollToHashLine() {
     var hash = window.location.hash;
     var match = hash.match(/^#glr-line-(\d+)$/);
@@ -471,6 +492,17 @@
   // --- Rendering ---
 
   function renderOverlay() {
+    // Guard: remove any existing overlay elements before re-rendering.
+    // Rapid toggle cycles can cause overlapping async renderOverlay calls;
+    // clearing first prevents duplicate dashboard entries and action buttons.
+    document.querySelectorAll(".glr-action-btn, .glr-threads, .glr-file-status, #glr-dashboard, .glr-block--deleted").forEach(function (el) {
+      el.remove();
+    });
+    document.querySelectorAll(".glr-block").forEach(function (el) {
+      el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
+        "glr-block--added", "glr-block--context");
+    });
+
     var fileInfo = state.changedFiles[state.currentFile];
     var isChanged = !!fileInfo;
 
@@ -648,18 +680,8 @@
         // Click → scroll to block or navigate to other page
         entry.style.cursor = "pointer";
         entry.addEventListener("click", function () {
-          var target = document.querySelector('[data-source-file="' + file + '"][data-source-line="' + item.line + '"]');
-          if (target) {
-            // Same page — scroll and expand
-            target.scrollIntoView({ behavior: "smooth", block: "center" });
-            var next = target.nextElementSibling;
-            if (!next || !next.classList.contains("glr-threads")) {
-              var actionBtn = target.querySelector(".glr-action-btn");
-              if (actionBtn) actionBtn.click();
-            }
-            target.style.outline = "2px solid var(--md-accent-fg-color, #536dfe)";
-            setTimeout(function () { target.style.outline = ""; }, 2000);
-          } else {
+          var selector = '[data-source-file="' + file + '"][data-source-line="' + item.line + '"]';
+          scrollToInlineComment(selector, function notFound() {
             // Different file — navigate to MkDocs page with review mode
             var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
             var pageUrl = pageMap[file];
@@ -676,7 +698,7 @@
               }
               window.location.href = currentBase + pagePath + "?review#glr-line-" + item.line;
             }
-          }
+          });
         });
 
         section.appendChild(entry);
