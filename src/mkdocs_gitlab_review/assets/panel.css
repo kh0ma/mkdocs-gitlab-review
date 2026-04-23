@@ -22,7 +22,7 @@ body.glr-review-on .md-sidebar--secondary {
   overflow: visible;
   /* Normalize sidebar padding so the panel's top edge
      aligns precisely with the content area (and the dashboard). */
-  padding: 1rem 0;
+  padding: 1rem 0.75rem 1rem 0;
 }
 
 /* When the footer is visible, unstick the sidebar so the panel
