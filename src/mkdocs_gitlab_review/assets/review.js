@@ -697,6 +697,21 @@
     mountCommentsDashboardChip();
   }
 
+  function relativeDate(isoString) {
+    var diff = Date.now() - new Date(isoString).getTime();
+    var mins = Math.floor(diff / 60000);
+    if (mins < 1) return "щойно";
+    if (mins < 60) return mins + " хв";
+    var hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + " год";
+    var days = Math.floor(hours / 24);
+    if (days < 7) return days + " дн";
+    var weeks = Math.floor(days / 7);
+    if (weeks < 4) return weeks + " тиж";
+    var months = Math.floor(days / 30);
+    return months + " міс";
+  }
+
   function renderCommentsDashboard() {
     // Remove old dashboard
     var old = document.getElementById("glr-dashboard");
@@ -710,48 +725,28 @@
 
     if (userDiscussions.length === 0) return;
 
-    var panel = document.createElement("div");
-    panel.id = "glr-dashboard";
-    panel.className = "glr-dashboard";
-
-    var header = document.createElement("div");
-    header.className = "glr-dashboard__header";
-
     var resolved = userDiscussions.filter(function (d) {
       return d.notes && d.notes.some(function (n) { return n.resolved; });
     }).length;
     var total = userDiscussions.length;
 
-    header.innerHTML = '<span class="glr-dashboard__title">Коментарі</span>' +
-      '<span class="glr-dashboard__count">' + resolved + '/' + total + ' вирішено</span>';
+    var panel = document.createElement("div");
+    panel.id = "glr-dashboard";
+    panel.className = "glr-dashboard";
 
-    var toggle = document.createElement("button");
-    toggle.className = "glr-dashboard__toggle";
-    toggle.textContent = "▼";
-    toggle.addEventListener("click", function () {
-      var list = panel.querySelector(".glr-dashboard__list");
-      if (list.style.display === "none") {
-        list.style.display = "";
-        toggle.textContent = "▼";
-      } else {
-        list.style.display = "none";
-        toggle.textContent = "▶";
-      }
-    });
-    header.appendChild(toggle);
+    var header = document.createElement("header");
+    header.className = "glr-dashboard__header";
+    header.innerHTML = '<h3 class="glr-dashboard__title">КОМЕНТАРІ</h3>' +
+      '<span class="glr-dashboard__count">' + resolved + '/' + total + ' вирішено</span>';
     panel.appendChild(header);
 
-    var list = document.createElement("div");
-    list.className = "glr-dashboard__list";
+    var grid = document.createElement("div");
+    grid.className = "glr-dashboard__grid";
 
-    // Group discussions by file — skip system notes
-    var byFile = {};
-    state.discussions.forEach(function (d) {
+    userDiscussions.forEach(function (d) {
       var note = d.notes && d.notes[0];
       if (!note) return;
-      // Skip system-generated discussions (commits, merges, thread events)
-      if (note.system) return;
-      if (!note.body || note.body.length === 0) return;
+
       var file = "";
       var line = 0;
       if (note.position) {
@@ -762,68 +757,115 @@
         if (match) { file = match[1]; line = parseInt(match[2]); }
       }
       if (!file) file = "Загальні";
-      if (!byFile[file]) byFile[file] = [];
-      byFile[file].push({ discussion: d, line: line, note: note });
-    });
 
-    Object.keys(byFile).forEach(function (file) {
-      var section = document.createElement("div");
-      section.className = "glr-dashboard__section";
+      var isRes = d.notes.some(function (n) { return n.resolved; });
+      var bodyText = stripFilePrefix(note.body || "");
+      // Strip HTML tags for plain text display
+      var plainText = bodyText.replace(/<[^>]+>/g, "").substring(0, 80);
+      var authorName = note.author ? note.author.name : "Невідомий";
+      var avatarUrl = note.author && note.author.avatar_url ? note.author.avatar_url : "";
+      var fileName = file.split("/").pop();
+      var threadCount = d.notes.filter(function (n) { return !n.system; }).length;
 
-      var fileHeader = document.createElement("div");
-      fileHeader.className = "glr-dashboard__file";
-      fileHeader.textContent = file;
-      section.appendChild(fileHeader);
+      var card = document.createElement("div");
+      card.className = "glr-dashboard__card";
+      card.dataset.discussionId = d.id;
 
-      byFile[file].forEach(function (item) {
-        var entry = document.createElement("div");
-        entry.className = "glr-dashboard__entry";
-        var isRes = item.discussion.notes.some(function (n) { return n.resolved; });
-        if (isRes) entry.classList.add("glr-dashboard__entry--resolved");
+      // Card top: avatar + author + edit pencil
+      var cardTop = document.createElement("div");
+      cardTop.className = "glr-dashboard__card-top";
 
-        var author = item.note.author ? item.note.author.name : "";
-        var body = stripFilePrefix(item.note.body || "").substring(0, 80);
+      if (avatarUrl) {
+        var avatarWrapper = document.createElement("span");
+        avatarWrapper.className = "glr-dashboard__card-avatar-wrap";
+        var avatar = document.createElement("img");
+        avatar.className = "glr-dashboard__card-avatar";
+        avatar.src = avatarUrl;
+        avatar.alt = "";
+        avatarWrapper.appendChild(avatar);
+        // Check if note author is MR author — add badge
+        if (note.author && state._mrAuthorId && note.author.id === state._mrAuthorId) {
+          avatarWrapper.classList.add("glr-dashboard__card-avatar--author");
+        }
+        cardTop.appendChild(avatarWrapper);
+      }
 
-        entry.innerHTML =
-          '<span class="glr-dashboard__status">' + (isRes ? "✓" : "○") + '</span>' +
-          '<span class="glr-dashboard__line">:' + item.line + '</span> ' +
-          '<span class="glr-dashboard__author">' + author + '</span> ' +
-          '<span class="glr-dashboard__text">' + body + '</span>';
+      var authorEl = document.createElement("span");
+      authorEl.className = "glr-dashboard__card-author";
+      authorEl.textContent = authorName;
+      cardTop.appendChild(authorEl);
 
-        // Click → scroll to block or navigate to other page
-        entry.style.cursor = "pointer";
-        entry.addEventListener("click", function () {
-          var selector = '[data-source-file="' + file + '"][data-source-line="' + item.line + '"]';
-          scrollToInlineComment(selector, function notFound() {
-            // Different file — navigate to MkDocs page with review mode
-            var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
-            var pageUrl = pageMap[file];
-            var currentBase = getCurrentSiteBase();
+      card.appendChild(cardTop);
 
-            if (pageUrl !== undefined) {
-              window.location.href = currentBase + pageUrl + "?review#glr-line-" + item.line;
-            } else {
-              var pagePath = file
-                .replace(/\.md$/, "/")
-                .replace(/^index\/$/, "");
-              if (pagePath.indexOf("/") === -1) {
-                pagePath = pagePath.toLowerCase();
-              }
-              window.location.href = currentBase + pagePath + "?review#glr-line-" + item.line;
-            }
-          });
+      // File link
+      var fileLink = document.createElement("a");
+      fileLink.className = "glr-dashboard__card-file";
+      fileLink.textContent = fileName;
+      fileLink.href = "#";
+      fileLink.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); });
+      card.appendChild(fileLink);
+
+      // Comment text
+      var textEl = document.createElement("p");
+      textEl.className = "glr-dashboard__card-text";
+      textEl.textContent = plainText;
+      card.appendChild(textEl);
+
+      // Meta: status + threads + date
+      var meta = document.createElement("div");
+      meta.className = "glr-dashboard__card-meta";
+
+      var statusEl = document.createElement("span");
+      statusEl.className = "glr-dashboard__card-status " +
+        (isRes ? "glr-dashboard__card-status--resolved" : "glr-dashboard__card-status--open");
+      statusEl.textContent = isRes ? "✅" : "🟡";
+      meta.appendChild(statusEl);
+
+      if (threadCount > 1) {
+        var threadsEl = document.createElement("span");
+        threadsEl.className = "glr-dashboard__card-threads";
+        threadsEl.textContent = "💬 " + threadCount;
+        meta.appendChild(threadsEl);
+      }
+
+      var dateEl = document.createElement("span");
+      dateEl.className = "glr-dashboard__card-date";
+      dateEl.textContent = relativeDate(note.created_at);
+      meta.appendChild(dateEl);
+
+      card.appendChild(meta);
+
+      // Click card → scroll to inline thread
+      card.addEventListener("click", function () {
+        var selector = '[data-source-file="' + file + '"][data-source-line="' + line + '"]';
+        scrollToInlineComment(selector, function notFound() {
+          var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
+          var pageUrl = pageMap[file];
+          var currentBase = getCurrentSiteBase();
+          if (pageUrl !== undefined) {
+            window.location.href = currentBase + pageUrl + "?review#glr-line-" + line;
+          } else {
+            var pagePath = file.replace(/\.md$/, "/").replace(/^index\/$/, "");
+            if (pagePath.indexOf("/") === -1) pagePath = pagePath.toLowerCase();
+            window.location.href = currentBase + pagePath + "?review#glr-line-" + line;
+          }
         });
-
-        section.appendChild(entry);
       });
 
-      list.appendChild(section);
+      grid.appendChild(card);
     });
 
-    panel.appendChild(list);
+    panel.appendChild(grid);
 
     var content = document.querySelector(".md-content__inner");
     if (content) content.insertBefore(panel, content.firstChild);
+
+    // Cache MR author ID for author badge (fetch once)
+    if (!state._mrAuthorId && state.mrIid) {
+      window.GitlabAPI.getMR(state.mrIid).then(function (mr) {
+        if (mr && mr.author) state._mrAuthorId = mr.author.id;
+      }).catch(function () {});
+    }
   }
 
   function mountCommentsDashboardChip() {
