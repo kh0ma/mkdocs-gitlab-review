@@ -131,6 +131,19 @@ describe("GitlabAPI", () => {
     expect(viewed.size).toBe(0);
   });
 
+  it("unmarkFileViewed removes entry from localStorage", () => {
+    window.GitlabAPI.markFileViewed(7, "spec.md", "sha_abc");
+    window.GitlabAPI.markFileViewed(7, "other.md", "sha_abc");
+    window.GitlabAPI.unmarkFileViewed(7, "spec.md", "sha_abc");
+    const viewed = window.GitlabAPI.getViewedFiles(7);
+    expect(viewed.has("spec.md:sha_abc")).toBe(false);
+    expect(viewed.has("other.md:sha_abc")).toBe(true);
+  });
+
+  it("unmarkFileViewed is a no-op when nothing stored", () => {
+    expect(() => window.GitlabAPI.unmarkFileViewed(999, "x.md", "sha")).not.toThrow();
+  });
+
   it("getDiscussions supports page and perPage params", async () => {
     fetchMock.mockResolvedValueOnce([]);
     await window.GitlabAPI.getDiscussions(7, { page: 2, perPage: 100 });

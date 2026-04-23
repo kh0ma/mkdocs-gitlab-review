@@ -143,6 +143,16 @@
       window.localStorage.setItem(key, JSON.stringify(set));
     },
 
+    unmarkFileViewed: function (iid, filePath, sha) {
+      var key = viewedKey(iid);
+      var raw = window.localStorage.getItem(key);
+      if (!raw) return;
+      var set;
+      try { set = JSON.parse(raw); } catch (e) { return; }
+      delete set[filePath + ":" + sha];
+      window.localStorage.setItem(key, JSON.stringify(set));
+    },
+
     getViewedFiles: function (iid) {
       var raw = window.localStorage.getItem(viewedKey(iid));
       if (!raw) return new Set();
