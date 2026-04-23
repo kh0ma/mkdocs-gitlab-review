@@ -698,14 +698,20 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   right: 0;
   top: auto;
   width: 100%;
+  max-width: 100%;
   max-height: 75vh;
   margin: 0;
   padding: 1rem;
+  box-sizing: border-box;
   border: 0;
   border-top: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 1rem 1rem 0 0;
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.15);
   background: var(--md-default-bg-color, #fff);
+}
+
+.glr-panel__sheet .glr-panel__block {
+  margin: 0;
 }
 
 .glr-panel__sheet::backdrop {
@@ -749,15 +755,15 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   max-width: 22rem;
   padding: 0.6rem 0.8rem;
   border-radius: 0.5rem;
-  background: rgba(33, 37, 41, 0.92);
+  background: #212529;
   color: #fff;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   font-size: 0.85rem;
   animation: glr-toast-in 180ms ease-out;
 }
 
-.glr-toast--error { background: rgba(207, 34, 46, 0.95); }
-.glr-toast--success { background: rgba(31, 136, 61, 0.95); }
+.glr-toast--error { background: #cf222e; }
+.glr-toast--success { background: #1f883d; }
 .glr-toast--leaving { opacity: 0; transition: opacity 220ms; }
 
 @keyframes glr-toast-in {
@@ -955,8 +961,8 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   /* Larger avatars inside bottom sheets for better tap targets */
   .glr-panel__sheet .glr-panel__avatar-img,
   .glr-panel__sheet .glr-panel__avatar--placeholder {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
   }
 
   .glr-panel__sheet .glr-panel__avatar-row {
@@ -964,9 +970,52 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   }
 
   .glr-panel__sheet .glr-panel__avatar-add {
-    width: 36px;
-    height: 36px;
-    font-size: 1.2rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1.3rem;
+  }
+
+  .glr-panel__sheet .glr-panel__avatar-badge,
+  .glr-panel__sheet .glr-panel__avatar-item--mandatory::after,
+  .glr-panel__sheet .glr-panel__avatar-item--author::after {
+    width: 14px;
+    height: 14px;
+    font-size: 8px;
+    line-height: 14px;
+    bottom: -2px;
+    right: -2px;
+  }
+
+  .glr-panel__member-popover {
+    border-radius: 0;
+    max-width: 100%;
+  }
+  .glr-panel__member-popover__list {
+    max-height: none;
+    flex: 1;
+  }
+  .glr-panel__member-popover__input {
+    font-size: 1rem;
+  }
+
+  .glr-panel__sheet .glr-panel__file-path {
+    font-size: 0.9rem;
+  }
+  .glr-panel__sheet .glr-panel__file-stats {
+    font-size: 0.8rem;
+  }
+  .glr-panel__sheet .glr-panel__file-status--inline {
+    font-size: 0.7rem;
+  }
+  .glr-panel__sheet .glr-panel__file-list {
+    max-height: none;
+  }
+
+  .glr-panel__chip-label {
+    font-size: 0.8rem;
+  }
+  .glr-panel__chip-value {
+    font-size: 0.85rem;
   }
 }
 
