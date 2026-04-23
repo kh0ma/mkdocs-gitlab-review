@@ -889,6 +889,9 @@
       sheet.addEventListener("keydown", function (e) {
         if (e.key === "Escape") closeSheet();
       });
+      sheet.addEventListener("click", function (e) {
+        if (e.target === sheet) closeSheet();
+      });
       sheet.querySelector(".glr-panel__sheet-close").addEventListener("click", closeSheet);
 
       if (typeof sheet.showModal === "function") {
