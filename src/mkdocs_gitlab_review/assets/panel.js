@@ -168,8 +168,10 @@
           ? '<img class="glr-panel__avatar" src="' + escapeHtml(m.avatar_url) + '" alt="">'
           : '<span class="glr-panel__avatar glr-panel__avatar--placeholder"></span>';
         li.innerHTML = avatar +
-          '<span class="glr-panel__member-popover__name">' + escapeHtml(m.name || m.username) + '</span>' +
-          '<span class="glr-panel__member-popover__username">@' + escapeHtml(m.username) + '</span>';
+          '<span class="glr-panel__member-popover__info">' +
+            '<span class="glr-panel__member-popover__name">' + escapeHtml(m.name || m.username) + '</span>' +
+            '<span class="glr-panel__member-popover__username">@' + escapeHtml(m.username) + '</span>' +
+          '</span>';
         li.addEventListener("click", function () {
           opts.onSelect(m);
           close();
