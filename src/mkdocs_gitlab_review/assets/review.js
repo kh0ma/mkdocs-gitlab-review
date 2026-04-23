@@ -168,11 +168,16 @@
       renderOverlay();
       scrollToHashLine();
       // Mount right-rail panel with current user (for Approve button authentication).
-      // On mobile, .md-sidebar--secondary is hidden (display:none / zero height)
-      // by MkDocs Material, so mount inside .md-content instead.
-      var rail = document.querySelector(".md-sidebar--secondary");
-      if (!rail || rail.offsetHeight === 0) {
+      // On mobile / tablet (≤76.1875em), MkDocs Material hides
+      // .md-sidebar--secondary so mount inside .md-content instead.
+      // Use the same media query as panel.js to avoid a detection gap
+      // between ~960-1220px where offsetHeight checks may disagree.
+      var isMobile = window.matchMedia("(max-width: 76.1875em)").matches;
+      var rail;
+      if (isMobile) {
         rail = document.querySelector(".md-content") || document.body;
+      } else {
+        rail = document.querySelector(".md-sidebar--secondary") || document.body;
       }
       if (state.panelHandle) state.panelHandle.unmount();
       window.GitlabAPI.getCurrentUser()
@@ -224,10 +229,13 @@
       // Unmount current panel
       state.panelHandle.unmount();
 
-      // Re-detect the correct mount target
-      var rail = document.querySelector(".md-sidebar--secondary");
-      if (!rail || rail.offsetHeight === 0) {
+      // Re-detect the correct mount target using the same media query
+      // as panel.js (avoids offsetHeight mismatches at tablet widths).
+      var rail;
+      if (mql.matches) {
         rail = document.querySelector(".md-content") || document.body;
+      } else {
+        rail = document.querySelector(".md-sidebar--secondary") || document.body;
       }
 
       // Re-mount with cached user context
