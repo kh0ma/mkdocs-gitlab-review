@@ -99,6 +99,18 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
   white-space: nowrap;
 }
 
+.glr-panel__draft-toggle {
+  font-size: 0.65rem;
+  color: rgba(0, 0, 0, 0.45);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.glr-panel__draft-toggle:hover {
+  color: rgba(0, 0, 0, 0.7);
+  text-decoration: underline;
+}
+
 .glr-panel__block-body {
   padding: 0.4rem 0.75rem 0.75rem;
 }
