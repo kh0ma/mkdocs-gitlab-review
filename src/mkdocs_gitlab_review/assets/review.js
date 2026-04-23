@@ -781,11 +781,41 @@
       var meta = document.createElement("div");
       meta.className = "glr-dashboard__card-meta";
 
-      var statusEl = document.createElement("span");
-      statusEl.className = "glr-dashboard__card-status " +
-        (isRes ? "glr-dashboard__card-status--resolved" : "glr-dashboard__card-status--open");
-      statusEl.textContent = isRes ? "✅" : "🟡";
-      meta.appendChild(statusEl);
+      var resolveToggle = document.createElement("button");
+      resolveToggle.type = "button";
+      resolveToggle.className = "glr-dashboard__card-resolve " +
+        (isRes ? "glr-dashboard__card-resolve--resolved" : "");
+      resolveToggle.textContent = isRes ? "\u2705" : "\u25CB";
+      resolveToggle.title = isRes ? "Скасувати вирішення" : "Вирішити";
+      resolveToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (resolveToggle.disabled) return;
+        resolveToggle.disabled = true;
+        var noteId = d.notes[0].id;
+        var newState = !isRes;
+        OAuth.apiFetch(
+          "/projects/" + config.project_id + "/merge_requests/" + state.mrIid +
+            "/discussions/" + d.id + "/notes/" + noteId,
+          { method: "PUT", body: JSON.stringify({ resolved: newState }) }
+        ).then(function () {
+          isRes = newState;
+          resolveToggle.textContent = newState ? "\u2705" : "\u25CB";
+          resolveToggle.title = newState ? "Скасувати вирішення" : "Вирішити";
+          resolveToggle.classList.toggle("glr-dashboard__card-resolve--resolved", newState);
+          resolveToggle.disabled = false;
+          // Update header counter
+          var resolvedCount = 0;
+          var cards = document.querySelectorAll(".glr-dashboard__card");
+          cards.forEach(function (c) {
+            if (c.querySelector(".glr-dashboard__card-resolve--resolved")) resolvedCount++;
+          });
+          var countEl = document.querySelector(".glr-dashboard__count");
+          if (countEl) countEl.textContent = resolvedCount + "/" + total + " вирішено";
+          // Refresh inline threads
+          renderOverlay();
+        }).catch(function () { resolveToggle.disabled = false; });
+      });
+      meta.appendChild(resolveToggle);
 
       if (threadCount > 1) {
         var threadsEl = document.createElement("span");
