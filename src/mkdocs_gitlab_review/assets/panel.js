@@ -544,18 +544,6 @@
       openBadge.textContent = "Відкрито";
       body.appendChild(openBadge);
 
-      // Delete-branch toggle
-      var deleteBranch = true;
-      var delToggle = document.createElement("label");
-      delToggle.className = "glr-panel__actions-toggle";
-      var delCheckbox = document.createElement("input");
-      delCheckbox.type = "checkbox";
-      delCheckbox.checked = deleteBranch;
-      delCheckbox.addEventListener("change", function () { deleteBranch = delCheckbox.checked; });
-      delToggle.appendChild(delCheckbox);
-      delToggle.appendChild(document.createTextNode(" Видалити гілку після злиття"));
-      body.appendChild(delToggle);
-
       // Merge button (primary)
       var mergeBtn = document.createElement("button");
       mergeBtn.type = "button";
@@ -584,7 +572,7 @@
         mergeBtn.textContent = "Злиття…";
         ctx.api.mergeMR(ctx.mrIid, {
           sha: mr.diff_refs && mr.diff_refs.head_sha,
-          shouldRemoveSourceBranch: deleteBranch,
+          shouldRemoveSourceBranch: true,
         }).then(function () {
           showToast("MR замерджено", "success");
           if (ctx.onChange) ctx.onChange();
