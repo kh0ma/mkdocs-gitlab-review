@@ -45,12 +45,15 @@ class GitLabReviewPlugin(BasePlugin):
 
         site_url = config.get("site_url", "") or ""
 
+        mr_iid = os.environ.get("CI_MERGE_REQUEST_IID", "")
+
         self._plugin_config = {
             "gitlab_url": gitlab_url,
             "project_id": project_id,
             "project_url": project_url,
             "oauth_client_id": oauth_client_id,
             "site_url": site_url.rstrip("/") + "/",
+            "mr_iid": int(mr_iid) if mr_iid else None,
         }
 
         if not gitlab_url or not project_id:

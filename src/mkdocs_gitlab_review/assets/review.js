@@ -247,13 +247,16 @@
   // --- Context detection ---
 
   function detectMrContext() {
-    // Fallback: parse URL first (instant, no network)
+    // 1. Build-time config (most reliable — injected from CI_MERGE_REQUEST_IID)
+    if (config.mr_iid) return Promise.resolve(config.mr_iid);
+
+    // 2. Parse current URL for /mr-{IID}/ prefix
     var match = window.location.pathname.match(/\/mr-(\d+)\//);
     if (match) return Promise.resolve(parseInt(match[1], 10));
 
-    // Try version.json at site root
-    var base = document.querySelector('link[rel="canonical"]');
-    var versionUrl = base ? new URL("version.json", base.href).href : "version.json";
+    // 3. Fallback: version.json (resolve relative to current page, not canonical,
+    //    so MR-scoped deployments get their own version.json)
+    var versionUrl = "version.json";
 
     return fetch(versionUrl)
       .then(function (r) { return r.ok ? r.json() : null; })
