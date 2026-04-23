@@ -819,6 +819,8 @@
 
 /* Resolve toggle on card */
 .glr-dashboard__card-resolve {
+  position: relative;
+  z-index: 1;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -838,6 +840,8 @@
 }
 
 .glr-dashboard__card-reaction {
+  position: relative;
+  z-index: 1;
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 1rem;
   padding: 0.1rem 0.35rem;
