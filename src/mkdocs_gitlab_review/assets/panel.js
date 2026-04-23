@@ -113,11 +113,19 @@
     pop.innerHTML =
       '<input type="text" class="glr-panel__member-popover__input" placeholder="Пошук користувача…" />' +
       '<ul class="glr-panel__member-popover__list" role="listbox"></ul>';
-    document.body.appendChild(pop);
-    var rect = anchor.getBoundingClientRect();
+    // Position relative to the closest .glr-panel__block (or body as fallback)
+    var block = anchor.closest(".glr-panel__block") || anchor.closest(".glr-panel") || document.body;
+    if (block !== document.body && getComputedStyle(block).position === "static") {
+      block.style.position = "relative";
+    }
+    block.appendChild(pop);
     pop.style.position = "absolute";
-    pop.style.left = (rect.left + window.scrollX) + "px";
-    pop.style.top = (rect.bottom + window.scrollY + 4) + "px";
+    pop.style.left = "0.75rem";
+    pop.style.right = "0.75rem";
+    // Place below anchor
+    var blockRect = block.getBoundingClientRect();
+    var anchorRect = anchor.getBoundingClientRect();
+    pop.style.top = (anchorRect.bottom - blockRect.top + 4) + "px";
 
     var input = pop.querySelector(".glr-panel__member-popover__input");
     var list = pop.querySelector(".glr-panel__member-popover__list");
@@ -216,74 +224,129 @@
   // -------- Block renderers --------
   // Each returns a DOM node (full block body).
 
+  function renderAvatarRow(users, opts) {
+    // opts: {getStatus(user), onRemove(user), onAdd, api, emptyText}
+    var row = document.createElement("div");
+    row.className = "glr-panel__avatar-row";
+
+    if (!users || users.length === 0) {
+      var empty = document.createElement("p");
+      empty.className = "glr-panel__empty";
+      empty.textContent = opts.emptyText || "";
+      row.appendChild(empty);
+    } else {
+      users.forEach(function (u) {
+        var status = opts.getStatus ? opts.getStatus(u) : null;
+        var item = document.createElement("span");
+        item.className = "glr-panel__avatar-item";
+        if (status) item.classList.add("glr-panel__avatar-item--" + status);
+
+        var tooltipName = u.name || u.username;
+        var tooltipStatus = status === "approved" ? " — Схвалив" : status === "requested" ? " — Очікує" : "";
+        item.title = tooltipName + tooltipStatus;
+
+        if (u.avatar_url) {
+          var img = document.createElement("img");
+          img.className = "glr-panel__avatar-img";
+          img.src = u.avatar_url;
+          img.alt = "";
+          item.appendChild(img);
+        } else {
+          var ph = document.createElement("span");
+          ph.className = "glr-panel__avatar-img glr-panel__avatar-img--placeholder";
+          item.appendChild(ph);
+        }
+
+        if (status === "approved") {
+          var badge = document.createElement("span");
+          badge.className = "glr-panel__avatar-badge glr-panel__avatar-badge--approved";
+          badge.textContent = "✓";
+          item.appendChild(badge);
+        }
+
+        // Click avatar → small popover with remove option
+        if (opts.onRemove) {
+          item.style.cursor = "pointer";
+          item.addEventListener("click", function (e) {
+            e.stopPropagation();
+            var existing = document.querySelector(".glr-panel__avatar-popover");
+            if (existing) existing.remove();
+            var pop = document.createElement("div");
+            pop.className = "glr-panel__avatar-popover";
+            pop.innerHTML =
+              '<div class="glr-panel__avatar-popover__name">' + escapeHtml(u.name || u.username) + '</div>' +
+              '<button type="button" class="glr-panel__avatar-popover__remove">Видалити</button>';
+            pop.querySelector(".glr-panel__avatar-popover__remove").addEventListener("click", function () {
+              pop.remove();
+              opts.onRemove(u);
+            });
+            item.appendChild(pop);
+            setTimeout(function () {
+              document.addEventListener("click", function closePop(ev) {
+                if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener("click", closePop); }
+              });
+            }, 0);
+          });
+        }
+
+        row.appendChild(item);
+      });
+    }
+
+    // Add button (dashed circle)
+    if (opts.onAdd) {
+      var addCircle = document.createElement("button");
+      addCircle.type = "button";
+      addCircle.className = "glr-panel__avatar-add";
+      addCircle.title = "Додати";
+      addCircle.textContent = "+";
+      addCircle.addEventListener("click", function () {
+        openMemberPopover(addCircle, {
+          api: opts.api,
+          onSelect: opts.onAdd,
+        });
+      });
+      row.appendChild(addCircle);
+    }
+
+    return row;
+  }
+
   function renderReviewersBlock(mr, ctx) {
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
-    if (!mr.reviewers || mr.reviewers.length === 0) {
-      body.innerHTML = '<p class="glr-panel__empty">Рецензентів не призначено</p>';
-    } else {
-      var approvedUsernames = new Set(
-        (ctx && ctx.approvals && ctx.approvals.approved_by || []).map(function (u) { return u.username; })
-      );
-      var list = document.createElement("ul");
-      list.className = "glr-panel__user-list";
-      mr.reviewers.forEach(function (r) {
-        var status = approvedUsernames.has(r.username) ? "approved" : "requested";
-        var statusLabel = status === "approved" ? "✓ approved" : "⏳ requested";
-        var li = document.createElement("li");
-        li.className = "glr-panel__user-row glr-panel__user-row--" + status;
-        var chipHtml = '<span class="glr-panel__user">' +
-          (r.avatar_url
-            ? '<img class="glr-panel__avatar" src="' + escapeHtml(r.avatar_url) + '" alt="">'
-            : '<span class="glr-panel__avatar glr-panel__avatar--placeholder"></span>') +
-          (r.name ? '<span class="glr-panel__user-name">' + escapeHtml(r.name) + '</span>' : '') +
-          '<span class="glr-panel__user-username">@' + escapeHtml(r.username) + '</span>' +
-          '</span>';
-        li.innerHTML = chipHtml +
-          ' <span class="glr-panel__user-status">' + statusLabel + '</span>';
-        if (ctx && ctx.api) {
-          var rmBtn = document.createElement("button");
-          rmBtn.type = "button";
-          rmBtn.className = "glr-panel__user-remove";
-          rmBtn.setAttribute("aria-label", "Видалити " + (r.name || r.username));
-          rmBtn.textContent = "×";
-          rmBtn.addEventListener("click", function () {
-            var remaining = mr.reviewers.filter(function (u) { return u.id !== r.id; }).map(function (u) { return u.id; });
-            ctx.api.setReviewers(ctx.mrIid, remaining).then(function () {
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              showToast("Remove failed: " + (err && err.message || "помилка"), "error");
-            });
-          });
-          li.appendChild(rmBtn);
-        }
-        list.appendChild(li);
-      });
-      body.appendChild(list);
-    }
 
-    if (ctx && ctx.api) {
-      var addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "glr-panel__add-user glr-panel__action-link";
-      addBtn.textContent = "+ Запросити рев'ю";
-      addBtn.addEventListener("click", function () {
-        openMemberPopover(addBtn, {
-          api: ctx.api,
-          onSelect: function (user) {
-            var ids = (mr.reviewers || []).map(function (u) { return u.id; });
-            if (ids.indexOf(user.id) >= 0) return;
-            ids.push(user.id);
-            ctx.api.setReviewers(ctx.mrIid, ids).then(function () {
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              showToast("Add failed: " + (err && err.message || "помилка"), "error");
-            });
-          },
+    var approvedUsernames = new Set(
+      (ctx && ctx.approvals && ctx.approvals.approved_by || []).map(function (u) { return u.username; })
+    );
+
+    var row = renderAvatarRow(mr.reviewers, {
+      emptyText: "Рецензентів не призначено",
+      getStatus: function (r) {
+        return approvedUsernames.has(r.username) ? "approved" : "requested";
+      },
+      onRemove: ctx && ctx.api ? function (r) {
+        var remaining = mr.reviewers.filter(function (u) { return u.id !== r.id; }).map(function (u) { return u.id; });
+        ctx.api.setReviewers(ctx.mrIid, remaining).then(function () {
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          showToast("Не вдалося видалити: " + (err && err.message || "помилка"), "error");
         });
-      });
-      body.appendChild(addBtn);
-    }
+      } : null,
+      onAdd: ctx && ctx.api ? function (user) {
+        var ids = (mr.reviewers || []).map(function (u) { return u.id; });
+        if (ids.indexOf(user.id) >= 0) return;
+        ids.push(user.id);
+        ctx.api.setReviewers(ctx.mrIid, ids).then(function () {
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          showToast("Не вдалося додати: " + (err && err.message || "помилка"), "error");
+        });
+      } : null,
+      api: ctx && ctx.api,
+    });
+
+    body.appendChild(row);
     return body;
   }
 
@@ -295,10 +358,10 @@
 
     var html = "";
     if (required === 0 && (!approvals.rules || approvals.rules.length === 0)) {
-      html += '<p class="glr-panel__empty">No approval rules configured</p>';
+      html += '<p class="glr-panel__empty">Правила схвалення не налаштовані</p>';
     } else {
       html += '<p class="glr-panel__approvals-counter"><strong>' +
-        (Number(approved.length) || 0) + '</strong> of <strong>' + required + '</strong> approvals</p>';
+        (Number(approved.length) || 0) + '</strong> з <strong>' + required + '</strong> схвалень</p>';
       if (approvals.rules && approvals.rules.length > 0) {
         html += '<ul class="glr-panel__rule-list">';
         approvals.rules.forEach(function (rule) {
@@ -323,13 +386,13 @@
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "glr-panel__approve-btn";
-      btn.textContent = alreadyApproved ? "Revoke approval" : "Approve";
+      btn.textContent = alreadyApproved ? "Відкликати схвалення" : "Схвалити";
       if (alreadyApproved) btn.classList.add("glr-panel__approve-btn--approved");
       btn.addEventListener("click", function () {
         if (btn.disabled) return;
         var wasApproved = alreadyApproved;
         btn.disabled = true;
-        btn.textContent = wasApproved ? "Revoking…" : "Approving…";
+        btn.textContent = wasApproved ? "Відкликання…" : "Схвалення…";
         var call = wasApproved ? ctx.api.revokeApproval(ctx.mrIid) : ctx.api.approve(ctx.mrIid);
         call
           .then(function () {
@@ -339,7 +402,7 @@
           .catch(function (err) {
             // Rollback
             btn.disabled = false;
-            btn.textContent = wasApproved ? "Revoke approval" : "Approve";
+            btn.textContent = wasApproved ? "Відкликати схвалення" : "Схвалити";
             showToast("Не вдалося: " + (err && err.message || "помилка"), "error");
           });
       });
@@ -349,7 +412,7 @@
       var a = document.createElement("a");
       a.className = "glr-panel__action-link glr-panel__action-link--primary";
       a.href = mrWebUrl(mr.iid);
-      a.textContent = "Approve in GitLab";
+      a.textContent = "Схвалити в GitLab";
       body.appendChild(a);
     }
     return body;
@@ -359,7 +422,7 @@
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
     if (!files || files.length === 0) {
-      body.innerHTML = '<p class="glr-panel__empty">No changed files</p>';
+      body.innerHTML = '<p class="glr-panel__empty">Немає змінених файлів</p>';
       return body;
     }
     var headSha = (mr && mr.diff_refs && mr.diff_refs.head_sha) || "unknown";
@@ -377,7 +440,7 @@
 
     var summary = document.createElement("p");
     summary.className = "glr-panel__files-count";
-    summary.innerHTML = '<strong>' + viewedCount + '</strong> of <strong>' + files.length + '</strong> viewed';
+    summary.innerHTML = '<strong>' + viewedCount + '</strong> з <strong>' + files.length + '</strong> переглянуто';
     body.appendChild(summary);
 
     var ul = document.createElement("ul");
@@ -399,12 +462,12 @@
         if (ctx && ctx.api && ctx.api.markFileViewed && checkbox.checked) {
           ctx.api.markFileViewed(ctx.mrIid, f.path, headSha);
           var newCount = viewedCount + 1;
-          summary.innerHTML = '<strong>' + newCount + '</strong> of <strong>' + files.length + '</strong> viewed';
+          summary.innerHTML = '<strong>' + newCount + '</strong> з <strong>' + files.length + '</strong> переглянуто';
           viewedCount = newCount;
         }
       });
       li.appendChild(checkbox);
-      var statusIcon = { added: "●", modified: "◐", deleted: "✕", renamed: "→" }[safeStatus];
+      var statusLetter = { added: "A", modified: "M", deleted: "D", renamed: "R" }[safeStatus];
       var fileName = f.path.split("/").pop();
       var pageMap = window.__GITLAB_REVIEW_PAGE_MAP__ || {};
       var pageUrl = pageMap[f.path];
@@ -414,12 +477,15 @@
       } else {
         pathTag = '<span class="glr-panel__file-path" title="' + escapeHtml(f.path) + '">' + escapeHtml(fileName) + '</span>';
       }
-      var labelHtml = ' <span class="glr-panel__file-status">' + statusIcon + '</span>' +
-        ' ' + pathTag +
-        ' <span class="glr-panel__file-stats">' +
-        '<span class="glr-panel__additions">+' + additions + '</span> ' +
-        '<span class="glr-panel__deletions">−' + deletions + '</span>' +
-        '</span>';
+      var statsHtml = "";
+      if (additions > 0 || deletions > 0) {
+        statsHtml = ' <span class="glr-panel__file-stats">' +
+          (additions > 0 ? '<span class="glr-panel__additions">+' + additions + '</span> ' : '') +
+          (deletions > 0 ? '<span class="glr-panel__deletions">−' + deletions + '</span>' : '') +
+          '</span>';
+      }
+      var labelHtml = ' <span class="glr-panel__file-status glr-panel__file-status--' + safeStatus + '">' + statusLetter + '</span>' +
+        ' ' + pathTag + statsHtml;
       var span = document.createElement("span");
       span.innerHTML = labelHtml;
       li.appendChild(span);
@@ -432,89 +498,74 @@
   function renderAssigneesBlock(mr, ctx) {
     var body = document.createElement("div");
     body.className = "glr-panel__block-body";
-    if (!mr.assignees || mr.assignees.length === 0) {
-      body.innerHTML = '<p class="glr-panel__empty">Не призначено</p>';
-    } else {
-      var list = document.createElement("ul");
-      list.className = "glr-panel__user-list";
-      mr.assignees.forEach(function (a) {
-        var li = document.createElement("li");
-        li.className = "glr-panel__user-row";
-        li.innerHTML = '<span class="glr-panel__user">' +
-          (a.avatar_url
-            ? '<img class="glr-panel__avatar" src="' + escapeHtml(a.avatar_url) + '" alt="">'
-            : '<span class="glr-panel__avatar glr-panel__avatar--placeholder"></span>') +
-          (a.name ? '<span class="glr-panel__user-name">' + escapeHtml(a.name) + '</span>' : '') +
-          '<span class="glr-panel__user-username">@' + escapeHtml(a.username) + '</span>' +
-          '</span>';
-        if (ctx && ctx.api) {
-          var rmBtn = document.createElement("button");
-          rmBtn.type = "button";
-          rmBtn.className = "glr-panel__user-remove";
-          rmBtn.textContent = "×";
-          rmBtn.setAttribute("aria-label", "Видалити " + (a.name || a.username));
-          rmBtn.addEventListener("click", function () {
-            var remaining = mr.assignees.filter(function (u) { return u.id !== a.id; }).map(function (u) { return u.id; });
-            ctx.api.setAssignees(ctx.mrIid, remaining).then(function () {
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              showToast("Remove failed: " + (err && err.message || "помилка"), "error");
-            });
-          });
-          li.appendChild(rmBtn);
-        }
-        list.appendChild(li);
-      });
-      body.appendChild(list);
-    }
 
-    if (ctx && ctx.api) {
-      var addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "glr-panel__add-user glr-panel__action-link";
-      addBtn.textContent = "+ Призначити";
-      addBtn.addEventListener("click", function () {
-        openMemberPopover(addBtn, {
-          api: ctx.api,
-          onSelect: function (user) {
-            var ids = (mr.assignees || []).map(function (u) { return u.id; });
-            if (ids.indexOf(user.id) >= 0) return;
-            ids.push(user.id);
-            ctx.api.setAssignees(ctx.mrIid, ids).then(function () {
-              if (ctx.onChange) ctx.onChange();
-            }).catch(function (err) {
-              showToast("Add failed: " + (err && err.message || "помилка"), "error");
-            });
-          },
+    var row = renderAvatarRow(mr.assignees, {
+      emptyText: "Не призначено",
+      onRemove: ctx && ctx.api ? function (a) {
+        var remaining = mr.assignees.filter(function (u) { return u.id !== a.id; }).map(function (u) { return u.id; });
+        ctx.api.setAssignees(ctx.mrIid, remaining).then(function () {
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          showToast("Не вдалося видалити: " + (err && err.message || "помилка"), "error");
         });
-      });
-      body.appendChild(addBtn);
-    }
+      } : null,
+      onAdd: ctx && ctx.api ? function (user) {
+        var ids = (mr.assignees || []).map(function (u) { return u.id; });
+        if (ids.indexOf(user.id) >= 0) return;
+        ids.push(user.id);
+        ctx.api.setAssignees(ctx.mrIid, ids).then(function () {
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          showToast("Не вдалося додати: " + (err && err.message || "помилка"), "error");
+        });
+      } : null,
+      api: ctx && ctx.api,
+    });
+
+    body.appendChild(row);
     return body;
   }
 
   function renderActionsBlock(mr, ctx) {
     var body = document.createElement("div");
-    body.className = "glr-panel__block-body";
+    body.className = "glr-panel__block-body glr-panel__actions";
 
     if (mr.state === "opened") {
-      // Merge button — enable only when: pipeline passing + approvals met + no conflicts
+      // State badge
+      var openBadge = document.createElement("span");
+      openBadge.className = "glr-panel__state-badge glr-panel__state-badge--open";
+      openBadge.textContent = "Відкрито";
+      body.appendChild(openBadge);
+
+      // Delete-branch toggle
+      var deleteBranch = true;
+      var delToggle = document.createElement("label");
+      delToggle.className = "glr-panel__actions-toggle";
+      var delCheckbox = document.createElement("input");
+      delCheckbox.type = "checkbox";
+      delCheckbox.checked = deleteBranch;
+      delCheckbox.addEventListener("change", function () { deleteBranch = delCheckbox.checked; });
+      delToggle.appendChild(delCheckbox);
+      delToggle.appendChild(document.createTextNode(" Видалити гілку після злиття"));
+      body.appendChild(delToggle);
+
+      // Merge button (primary)
       var mergeBtn = document.createElement("button");
       mergeBtn.type = "button";
-      mergeBtn.className = "glr-panel__merge-btn glr-panel__action-link--primary";
-      mergeBtn.textContent = "Merge MR";
+      mergeBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--primary";
+      mergeBtn.textContent = "Злити MR";
 
       var disabledReasons = [];
-      if (mr.has_conflicts) disabledReasons.push("Merge conflicts");
+      if (mr.has_conflicts) disabledReasons.push("Конфлікти злиття");
       if (ctx && ctx.pipelineStatus && ctx.pipelineStatus.status &&
           ctx.pipelineStatus.status !== "success" &&
           ctx.pipelineStatus.status !== "manual" &&
           ctx.pipelineStatus.status !== "skipped") {
-        disabledReasons.push("Pipeline not passing (" + ctx.pipelineStatus.status + ")");
+        disabledReasons.push("Pipeline не пройшов (" + ctx.pipelineStatus.status + ")");
       }
       if (ctx && ctx.approvals &&
           (ctx.approvals.approved_by || []).length < (ctx.approvals.required || 0)) {
-        disabledReasons.push("Approvals not met");
+        disabledReasons.push("Схвалень недостатньо");
       }
       if (disabledReasons.length > 0) {
         mergeBtn.disabled = true;
@@ -523,39 +574,26 @@
       mergeBtn.addEventListener("click", function () {
         if (mergeBtn.disabled) return;
         mergeBtn.disabled = true;
-        confirmDialog({
-          title: "Підтвердіть merge",
-          body: "Об'єднати " + mr.source_branch + " → " + (mr.target_branch || "target") + "?",
-          confirmLabel: "Merge",
-          cancelLabel: "Скасувати",
-          extraFields: [
-            { name: "delete_source_branch", type: "checkbox", label: "Видалити source branch після merge", default: true },
-          ],
-        }).then(function (result) {
-          if (!result) {
-            mergeBtn.disabled = false;
-            return;
-          }
-          mergeBtn.textContent = "Merging…";
-          ctx.api.mergeMR(ctx.mrIid, {
-            sha: mr.diff_refs && mr.diff_refs.head_sha,
-            shouldRemoveSourceBranch: !!result.delete_source_branch,
-          }).then(function () {
-            showToast("MR замерджено", "success");
-            if (ctx.onChange) ctx.onChange();
-          }).catch(function (err) {
-            mergeBtn.disabled = false;
-            mergeBtn.textContent = "Merge MR";
-            showToast("Merge failed: " + (err && err.message || "помилка"), "error");
-          });
+        mergeBtn.textContent = "Злиття…";
+        ctx.api.mergeMR(ctx.mrIid, {
+          sha: mr.diff_refs && mr.diff_refs.head_sha,
+          shouldRemoveSourceBranch: deleteBranch,
+        }).then(function () {
+          showToast("MR замерджено", "success");
+          if (ctx.onChange) ctx.onChange();
+        }).catch(function (err) {
+          mergeBtn.disabled = false;
+          mergeBtn.textContent = "Злити MR";
+          showToast("Злиття не вдалось: " + (err && err.message || "помилка"), "error");
         });
       });
       body.appendChild(mergeBtn);
 
+      // Close button (secondary / danger)
       var closeBtn = document.createElement("button");
       closeBtn.type = "button";
-      closeBtn.className = "glr-panel__close-btn glr-panel__action-link";
-      closeBtn.textContent = "Close MR";
+      closeBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--danger";
+      closeBtn.textContent = "Закрити MR";
       closeBtn.addEventListener("click", function () {
         if (closeBtn.disabled) return;
         closeBtn.disabled = true;
@@ -569,34 +607,34 @@
             closeBtn.disabled = false;
             return;
           }
-          closeBtn.textContent = "Closing…";
+          closeBtn.textContent = "Закриття…";
           ctx.api.closeMR(ctx.mrIid).then(function () {
             showToast("MR закрито", "success");
             if (ctx.onChange) ctx.onChange();
           }).catch(function (err) {
             closeBtn.disabled = false;
-            closeBtn.textContent = "Close MR";
-            showToast("Close failed: " + (err && err.message || "помилка"), "error");
+            closeBtn.textContent = "Закрити MR";
+            showToast("Закриття не вдалось: " + (err && err.message || "помилка"), "error");
           });
         });
       });
       body.appendChild(closeBtn);
     } else if (mr.state === "merged") {
-      var mergedBadge = document.createElement("p");
+      var mergedBadge = document.createElement("span");
       mergedBadge.className = "glr-panel__state-badge glr-panel__state-badge--merged";
-      mergedBadge.textContent = "Merged";
+      mergedBadge.textContent = "Злито";
       body.appendChild(mergedBadge);
 
-      if (mr.source_branch) {
+      if (mr.source_branch && ctx && ctx.api) {
         var delBtn = document.createElement("button");
         delBtn.type = "button";
-        delBtn.className = "glr-panel__delete-branch-btn glr-panel__action-link";
-        delBtn.textContent = "Видалити source branch (" + mr.source_branch + ")";
+        delBtn.className = "glr-panel__actions-btn glr-panel__actions-btn--danger";
+        delBtn.textContent = "Видалити гілку (" + mr.source_branch + ")";
         delBtn.addEventListener("click", function () {
           if (delBtn.disabled) return;
           delBtn.disabled = true;
           confirmDialog({
-            title: "Видалити source branch?",
+            title: "Видалити гілку?",
             body: "Гілка '" + mr.source_branch + "' буде видалена з origin. Дію неможливо відмінити.",
             confirmLabel: "Видалити",
             danger: true,
@@ -607,28 +645,28 @@
             }
             delBtn.textContent = "Видалення…";
             ctx.api.deleteSourceBranch(mr.source_branch).then(function () {
-              showToast("Branch видалено", "success");
+              showToast("Гілку видалено", "success");
               delBtn.remove();
               if (ctx.onChange) ctx.onChange();
             }).catch(function (err) {
               delBtn.disabled = false;
-              delBtn.textContent = "Видалити source branch (" + mr.source_branch + ")";
-              showToast("Delete failed: " + (err && err.message || "помилка"), "error");
+              delBtn.textContent = "Видалити гілку (" + mr.source_branch + ")";
+              showToast("Видалення не вдалось: " + (err && err.message || "помилка"), "error");
             });
           });
         });
         body.appendChild(delBtn);
       }
     } else if (mr.state === "closed") {
-      var closedBadge = document.createElement("p");
+      var closedBadge = document.createElement("span");
       closedBadge.className = "glr-panel__state-badge glr-panel__state-badge--closed";
-      closedBadge.textContent = "Closed";
+      closedBadge.textContent = "Закрито";
       body.appendChild(closedBadge);
 
       var openLink = document.createElement("a");
-      openLink.className = "glr-panel__action-link";
+      openLink.className = "glr-panel__actions-btn";
       openLink.href = mrWebUrl(mr.iid);
-      openLink.textContent = "Open in GitLab";
+      openLink.textContent = "Відкрити в GitLab";
       body.appendChild(openLink);
     }
     return body;
@@ -637,11 +675,11 @@
   // -------- Panel lifecycle --------
 
   var BLOCK_DEFS = [
-    { key: "reviewers",  title: "Reviewers" },
-    { key: "approvals",  title: "Approvals" },
-    { key: "files",      title: "Changed files" },
-    { key: "assignees",  title: "Assignees" },
-    { key: "actions",    title: "MR Actions" },
+    { key: "reviewers",  title: "Рецензенти" },
+    { key: "approvals",  title: "Схвалення" },
+    { key: "files",      title: "Змінені файли" },
+    { key: "assignees",  title: "Призначені" },
+    { key: "actions",    title: "Дії з MR" },
   ];
 
   function buildBlockWrapper(def) {

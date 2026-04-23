@@ -609,7 +609,7 @@
     }).length;
     var total = userDiscussions.length;
 
-    header.innerHTML = '<span class="glr-dashboard__title">\uD83D\uDCAC Коментарі</span>' +
+    header.innerHTML = '<span class="glr-dashboard__title">Коментарі</span>' +
       '<span class="glr-dashboard__count">' + resolved + '/' + total + ' вирішено</span>';
 
     var toggle = document.createElement("button");
@@ -843,7 +843,7 @@
       authorEl.textContent = note.author.name || note.author.username;
     } else {
       authorEl = document.createElement("strong");
-      authorEl.textContent = "Unknown";
+      authorEl.textContent = "Невідомий";
     }
     header.appendChild(authorEl);
 
