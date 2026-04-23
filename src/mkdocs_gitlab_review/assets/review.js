@@ -18,6 +18,7 @@
     reviewActive: false,
     baseBlocks: null,  // array of text blocks from base version
     panelHandle: null,
+    tocStash: null,    // {node, parent, next} when ToC is detached for review mode
   };
 
   // --- Init ---
@@ -144,6 +145,12 @@
     toggleBtn.querySelector(".glr-toolbar-btn__label").innerHTML = "\u25CF Рев'ю";
     toggleBtn.title = "Вимкнути рев'ю";
 
+    // Mark <body> so CSS can remove MkDocs' Table of Contents from the layout
+    // (and JS below detaches the ToC node so it doesn't take up space or
+    // receive focus while reviewing).
+    document.body.classList.add("glr-review-on");
+    detachToc();
+
     // Show share button
     showShareButton(toggleBtn);
 
@@ -184,6 +191,10 @@
     toggleBtn.querySelector(".glr-toolbar-btn__label").textContent = "Рев'ю";
     toggleBtn.title = "Увімкнути рев'ю";
 
+    // Restore MkDocs' Table of Contents that was detached on activate.
+    document.body.classList.remove("glr-review-on");
+    reattachToc();
+
     if (state.panelHandle) {
       state.panelHandle.unmount();
       state.panelHandle = null;
@@ -200,6 +211,37 @@
     // Remove share button wrapper
     var shareBtn = document.getElementById("glr-share-btn");
     if (shareBtn && shareBtn.parentNode) shareBtn.parentNode.remove();
+  }
+
+  // --- ToC detach / reattach ---
+  //
+  // When review mode is active, MkDocs' Table of Contents should not compete
+  // for space or focus with the review panel. We detach the whole ToC subtree
+  // from the DOM (not just hide it) and keep a handle so we can put it back.
+
+  function detachToc() {
+    if (state.tocStash) return; // already detached
+    var toc = document.querySelector(
+      ".md-sidebar--secondary .md-nav--secondary, .md-sidebar--secondary .md-nav[data-md-level=\"0\"]"
+    );
+    if (!toc || !toc.parentNode) return;
+    state.tocStash = {
+      node: toc,
+      parent: toc.parentNode,
+      next: toc.nextSibling,
+    };
+    toc.parentNode.removeChild(toc);
+  }
+
+  function reattachToc() {
+    var stash = state.tocStash;
+    if (!stash || !stash.parent) return;
+    if (stash.next && stash.next.parentNode === stash.parent) {
+      stash.parent.insertBefore(stash.node, stash.next);
+    } else {
+      stash.parent.appendChild(stash.node);
+    }
+    state.tocStash = null;
   }
 
   // --- Context detection ---
