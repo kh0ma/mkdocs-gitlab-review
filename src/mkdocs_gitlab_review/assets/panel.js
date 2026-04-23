@@ -483,32 +483,24 @@
           if (e.user && String(e.user.id) === String(userId)) myEmojis[e.name] = true;
         });
 
-        // 1. Thumbsup is always first
-        grid.appendChild(makeReactionBtn("thumbsup", counts.thumbsup || 0, !!myEmojis.thumbsup));
-
-        // 2. Server emojis (excluding thumbsup): top 3 by count, include thumbsdown if present
+        // Build display list: thumbsup always first, then server emojis by count
+        var display = ["thumbsup"];
         var serverNames = Object.keys(counts).filter(function (n) { return n !== "thumbsup"; });
         serverNames.sort(function (a, b) { return (counts[b] || 0) - (counts[a] || 0); });
-        var topServer = serverNames.slice(0, 3);
+        serverNames.forEach(function (n) { display.push(n); });
 
-        if (topServer.length > 0) {
-          // Has server state — show top 3 from server
-          topServer.forEach(function (name) {
-            grid.appendChild(makeReactionBtn(name, counts[name] || 0, !!myEmojis[name]));
-          });
-          // If more than 4 total (thumbsup + 3+), remaining are scrollable
-          serverNames.slice(3).forEach(function (name) {
-            grid.appendChild(makeReactionBtn(name, counts[name] || 0, !!myEmojis[name]));
-          });
-        } else {
-          // No server emojis beyond thumbsup — show 3 random from pool
-          var random3 = pickRandom(RANDOM_POOL, 3);
-          random3.forEach(function (name) {
-            grid.appendChild(makeReactionBtn(name, 0, false));
-          });
+        // Fill remaining slots to reach 4 with random emojis (not already in display)
+        if (display.length < 4) {
+          var available = RANDOM_POOL.filter(function (n) { return display.indexOf(n) === -1; });
+          var fillers = pickRandom(available, 4 - display.length);
+          fillers.forEach(function (n) { display.push(n); });
         }
+
+        display.forEach(function (name) {
+          grid.appendChild(makeReactionBtn(name, counts[name] || 0, !!myEmojis[name]));
+        });
       }).catch(function () {
-        // API failed — show thumbsup + 3 random
+        // API failed — thumbsup + 3 random
         grid.appendChild(makeReactionBtn("thumbsup", 0, false));
         pickRandom(RANDOM_POOL, 3).forEach(function (name) {
           grid.appendChild(makeReactionBtn(name, 0, false));

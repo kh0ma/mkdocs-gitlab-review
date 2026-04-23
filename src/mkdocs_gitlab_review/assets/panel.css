@@ -423,19 +423,18 @@ body.glr-review-on .md-sidebar--secondary .md-sidebar__inner {
 /* Emoji reaction grid — 2×2 */
 
 .glr-panel__reaction-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.3rem;
   margin-top: 0.5rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  max-height: calc(2 * 2.3rem + 0.3rem); /* 2 rows visible */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
-.glr-panel__reaction-grid::-webkit-scrollbar { display: none; }
-
 .glr-panel__reaction-btn {
-  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
