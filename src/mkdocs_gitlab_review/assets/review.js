@@ -827,6 +827,10 @@
       var dateEl = document.createElement("span");
       dateEl.className = "glr-dashboard__card-date";
       dateEl.textContent = relativeDate(note.created_at);
+      dateEl.title = new Date(note.created_at).toLocaleString("uk-UA", {
+        year: "numeric", month: "long", day: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
       meta.appendChild(dateEl);
 
       card.appendChild(meta);
