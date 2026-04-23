@@ -21,6 +21,7 @@
     tocStash: null,    // {node, parent, next} when ToC is detached for review mode
     lastMountUser: null,  // cached currentUser for re-mount on breakpoint change
     breakpointMql: null,  // matchMedia query for cleanup on deactivate
+    footerObserver: null, // IntersectionObserver for footer overlap prevention
   };
 
   // --- Init ---
@@ -152,6 +153,7 @@
     // receive focus while reviewing).
     document.body.classList.add("glr-review-on");
     detachToc();
+    setupFooterObserver();
 
     // Show share button
     showShareButton(toggleBtn);
@@ -247,6 +249,7 @@
     // Restore MkDocs' Table of Contents that was detached on activate.
     document.body.classList.remove("glr-review-on");
     reattachToc();
+    teardownFooterObserver();
 
     // Clean up breakpoint listener — the handler checks state.reviewActive
     // which is already false, so even if the listener lingers it is a no-op.
@@ -300,6 +303,37 @@
       stash.parent.appendChild(stash.node);
     }
     state.tocStash = null;
+  }
+
+  // --- Footer overlap prevention ---
+  //
+  // When the user scrolls to the bottom of the page, the sticky panel
+  // can overlap the footer. We observe the footer element and toggle
+  // a CSS class that unsticks the sidebar, letting it scroll naturally
+  // off the top instead of overlapping the footer.
+
+  function setupFooterObserver() {
+    if (state.footerObserver) return;
+    var footer = document.querySelector(".md-footer");
+    if (!footer) return;
+    state.footerObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          document.body.classList.add("glr-footer-visible");
+        } else {
+          document.body.classList.remove("glr-footer-visible");
+        }
+      });
+    }, { threshold: 0 });
+    state.footerObserver.observe(footer);
+  }
+
+  function teardownFooterObserver() {
+    if (state.footerObserver) {
+      state.footerObserver.disconnect();
+      state.footerObserver = null;
+    }
+    document.body.classList.remove("glr-footer-visible");
   }
 
   // --- Context detection ---
