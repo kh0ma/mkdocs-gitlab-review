@@ -979,6 +979,18 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
     bottom: -2px;
     right: -2px;
   }
+
+  .glr-panel__member-popover {
+    border-radius: 0;
+    max-width: 100%;
+  }
+  .glr-panel__member-popover__list {
+    max-height: none;
+    flex: 1;
+  }
+  .glr-panel__member-popover__input {
+    font-size: 1rem;
+  }
 }
 
 /* --- Small phones (≤480px) --- */

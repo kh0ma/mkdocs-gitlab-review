@@ -127,22 +127,49 @@
       pop.style.width = blockEl.getBoundingClientRect().width + "px";
     }
 
-    var anchorRect = anchor.getBoundingClientRect();
-    var popTop = anchorRect.bottom + 4;
-    // Align popover left edge with the block left edge (or anchor if no block)
-    var popLeft = blockEl ? blockEl.getBoundingClientRect().left : anchorRect.left;
-    pop.style.top = popTop + "px";
-    pop.style.left = popLeft + "px";
-    // After rendering, adjust if overflowing viewport
-    requestAnimationFrame(function () {
-      var popRect = pop.getBoundingClientRect();
-      if (popRect.bottom > window.innerHeight) {
-        pop.style.top = (anchorRect.top - popRect.height - 4) + "px";
-      }
-      if (popRect.right > window.innerWidth) {
-        pop.style.left = (window.innerWidth - popRect.width - 8) + "px";
-      }
-    });
+    var isMobile = window.matchMedia("(max-width: 76.1875em)").matches;
+    if (isMobile) {
+      // Full-screen overlay on mobile
+      pop.style.position = "fixed";
+      pop.style.top = "0";
+      pop.style.left = "0";
+      pop.style.right = "0";
+      pop.style.bottom = "0";
+      pop.style.width = "100%";
+      pop.style.maxWidth = "100%";
+      pop.style.height = "100%";
+      pop.style.borderRadius = "0";
+      pop.style.boxShadow = "none";
+      pop.style.padding = "1rem";
+      pop.style.boxSizing = "border-box";
+      pop.style.display = "flex";
+      pop.style.flexDirection = "column";
+      // Add a close/back button at the top
+      var closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "glr-panel__member-popover__close";
+      closeBtn.textContent = "← Назад";
+      closeBtn.style.cssText = "align-self:flex-start;border:0;background:transparent;font:inherit;font-size:0.9rem;color:var(--md-primary-fg-color,#0d7377);cursor:pointer;padding:0.3rem 0;margin-bottom:0.5rem;";
+      closeBtn.addEventListener("click", function () { close(); });
+      pop.insertBefore(closeBtn, pop.firstChild);
+    } else {
+      var anchorRect = anchor.getBoundingClientRect();
+      var popTop = anchorRect.bottom + 4;
+      // Align popover left edge with the block left edge (or anchor if no block)
+      var popLeft = blockEl ? blockEl.getBoundingClientRect().left : anchorRect.left;
+      pop.style.top = popTop + "px";
+      pop.style.left = popLeft + "px";
+      // After rendering, adjust if overflowing viewport
+      requestAnimationFrame(function () {
+        var popRect = pop.getBoundingClientRect();
+        if (popRect.bottom > window.innerHeight) {
+          pop.style.top = (anchorRect.top - popRect.height - 4) + "px";
+        }
+        if (popRect.right > window.innerWidth) {
+          pop.style.left = (window.innerWidth - popRect.width - 8) + "px";
+        }
+      });
+    }
 
     var input = pop.querySelector(".glr-panel__member-popover__input");
     var list = pop.querySelector(".glr-panel__member-popover__list");
