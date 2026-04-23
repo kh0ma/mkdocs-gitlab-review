@@ -951,6 +951,23 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   }
 
   /* Member popover already constrained via max-width in base styles */
+
+  /* Larger avatars inside bottom sheets for better tap targets */
+  .glr-panel__sheet .glr-panel__avatar-img,
+  .glr-panel__sheet .glr-panel__avatar--placeholder {
+    width: 36px;
+    height: 36px;
+  }
+
+  .glr-panel__sheet .glr-panel__avatar-row {
+    gap: 0.5rem;
+  }
+
+  .glr-panel__sheet .glr-panel__avatar-add {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+  }
 }
 
 /* --- Small phones (≤480px) --- */
