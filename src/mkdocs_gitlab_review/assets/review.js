@@ -266,7 +266,7 @@
       el.classList.remove("glr-block", "glr-block--commentable", "glr-block--has-comments",
         "glr-block--added", "glr-block--context");
     });
-    document.querySelectorAll(".glr-action-btn, .glr-threads, #glr-dashboard, #glr-share-dialog, .glr-block--deleted").forEach(function (el) {
+    document.querySelectorAll(".glr-action-btn, .glr-threads, #glr-dashboard, #glr-share-dialog, .glr-block--deleted, .glr-panel__chip--comments, .glr-panel__sheet--comments").forEach(function (el) {
       el.remove();
     });
     // Remove share button wrapper
@@ -582,7 +582,7 @@
     // Guard: remove any existing overlay elements before re-rendering.
     // Rapid toggle cycles can cause overlapping async renderOverlay calls;
     // clearing first prevents duplicate dashboard entries and action buttons.
-    document.querySelectorAll(".glr-action-btn, .glr-threads, #glr-dashboard, .glr-block--deleted").forEach(function (el) {
+    document.querySelectorAll(".glr-action-btn, .glr-threads, #glr-dashboard, .glr-block--deleted, .glr-panel__chip--comments, .glr-panel__sheet--comments").forEach(function (el) {
       el.remove();
     });
     document.querySelectorAll(".glr-block").forEach(function (el) {
@@ -666,6 +666,9 @@
 
     // Render comments dashboard panel
     renderCommentsDashboard();
+
+    // On mobile, mount comments dashboard as a chip in the chip bar
+    mountCommentsDashboardChip();
   }
 
   function renderCommentsDashboard() {
@@ -795,6 +798,105 @@
 
     var content = document.querySelector(".md-content__inner");
     if (content) content.insertBefore(panel, content.firstChild);
+  }
+
+  function mountCommentsDashboardChip() {
+    var mql = window.matchMedia("(max-width: 76.1875em)");
+    if (!mql.matches) return;
+
+    var chipBar = document.querySelector(".glr-panel__chip-bar");
+    if (!chipBar) return;
+
+    var dashboard = document.getElementById("glr-dashboard");
+
+    // Remove any previously injected comments chip
+    var existing = chipBar.querySelector(".glr-panel__chip--comments");
+    if (existing) existing.remove();
+
+    // Count open (unresolved) discussions
+    var userDiscussions = state.discussions.filter(function (d) {
+      var note = d.notes && d.notes[0];
+      return note && !note.system && note.body;
+    });
+    // Create chip
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "glr-panel__chip glr-panel__chip--comments";
+    chip.dataset.block = "comments";
+    chip.innerHTML = '<span class="glr-panel__chip-label">Коментарі</span>' +
+      '<span class="glr-panel__chip-value">' + String(userDiscussions.length) + '</span>';
+
+    // Insert as first chip
+    chipBar.insertBefore(chip, chipBar.firstChild);
+
+    // Hide inline dashboard on mobile (content is in the chip sheet)
+    if (dashboard) dashboard.style.display = "none";
+
+    // Chip tap → open bottom sheet with dashboard content
+    chip.addEventListener("click", function () {
+      // Close any existing sheet opened by panel.js or previous click
+      var existingSheet = document.querySelector(".glr-panel__sheet--comments");
+      if (existingSheet) {
+        if (typeof existingSheet.close === "function") {
+          try { existingSheet.close(); } catch (e) {}
+        }
+        if (existingSheet.parentNode) existingSheet.parentNode.removeChild(existingSheet);
+        return;
+      }
+
+      var sheet = document.createElement("dialog");
+      sheet.className = "glr-panel__sheet glr-panel__sheet--comments";
+      sheet.innerHTML = '<button type="button" class="glr-panel__sheet-close" aria-label="Закрити">\u00d7</button>' +
+        '<div class="glr-panel__sheet-body"></div>';
+
+      var sheetBody = sheet.querySelector(".glr-panel__sheet-body");
+
+      // Move the live dashboard DOM into the sheet (preserves event listeners)
+      var dashboardEl = document.getElementById("glr-dashboard");
+      var dashboardParent = null;
+      var dashboardNext = null;
+      if (dashboardEl) {
+        dashboardParent = dashboardEl.parentNode;
+        dashboardNext = dashboardEl.nextSibling;
+        dashboardEl.style.display = "";
+        sheetBody.appendChild(dashboardEl);
+      } else {
+        // No discussions — show empty message
+        var empty = document.createElement("p");
+        empty.className = "glr-panel__empty";
+        empty.textContent = "Немає коментарів";
+        sheetBody.appendChild(empty);
+      }
+
+      document.body.appendChild(sheet);
+
+      function closeSheet() {
+        if (typeof sheet.close === "function") {
+          try { sheet.close(); } catch (e) {}
+        }
+        // Move dashboard back and re-hide it
+        if (dashboardEl && dashboardParent) {
+          dashboardEl.style.display = "none";
+          if (dashboardNext && dashboardNext.parentNode === dashboardParent) {
+            dashboardParent.insertBefore(dashboardEl, dashboardNext);
+          } else {
+            dashboardParent.appendChild(dashboardEl);
+          }
+        }
+        if (sheet.parentNode) sheet.parentNode.removeChild(sheet);
+      }
+
+      sheet.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeSheet();
+      });
+      sheet.querySelector(".glr-panel__sheet-close").addEventListener("click", closeSheet);
+
+      if (typeof sheet.showModal === "function") {
+        try { sheet.showModal(); } catch (e) {}
+      } else {
+        sheet.setAttribute("open", "");
+      }
+    });
   }
 
   function insertDeletedBlocks(deletedLines) {
