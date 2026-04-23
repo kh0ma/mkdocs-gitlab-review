@@ -113,11 +113,19 @@
     pop.innerHTML =
       '<input type="text" class="glr-panel__member-popover__input" placeholder="Пошук користувача…" />' +
       '<ul class="glr-panel__member-popover__list" role="listbox"></ul>';
-    document.body.appendChild(pop);
-    var rect = anchor.getBoundingClientRect();
+    // Position relative to the closest .glr-panel__block (or body as fallback)
+    var block = anchor.closest(".glr-panel__block") || anchor.closest(".glr-panel") || document.body;
+    if (block !== document.body && getComputedStyle(block).position === "static") {
+      block.style.position = "relative";
+    }
+    block.appendChild(pop);
     pop.style.position = "absolute";
-    pop.style.left = (rect.left + window.scrollX) + "px";
-    pop.style.top = (rect.bottom + window.scrollY + 4) + "px";
+    pop.style.left = "0.75rem";
+    pop.style.right = "0.75rem";
+    // Place below anchor
+    var blockRect = block.getBoundingClientRect();
+    var anchorRect = anchor.getBoundingClientRect();
+    pop.style.top = (anchorRect.bottom - blockRect.top + 4) + "px";
 
     var input = pop.querySelector(".glr-panel__member-popover__input");
     var list = pop.querySelector(".glr-panel__member-popover__list");
