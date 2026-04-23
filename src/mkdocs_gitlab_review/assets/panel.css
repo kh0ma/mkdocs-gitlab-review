@@ -785,8 +785,8 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 }
 .glr-confirm::backdrop { background: rgba(0, 0, 0, 0.35); }
 
-.glr-confirm__title { margin: 0 0 0.5rem; font-size: 1rem; }
-.glr-confirm__body { margin: 0 0 0.75rem; font-size: 0.85rem; }
+.glr-confirm__title { margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 700; }
+.glr-confirm__body { margin: 0 0 0.75rem; font-size: 0.9rem; line-height: 1.5; }
 
 .glr-confirm__field {
   display: flex; align-items: center; gap: 0.4rem;
@@ -794,25 +794,41 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
 }
 
 .glr-confirm__buttons {
-  display: flex; gap: 0.4rem; justify-content: flex-end; margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 .glr-confirm__cancel,
 .glr-confirm__ok {
-  padding: 0.4rem 0.8rem;
-  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  min-height: 44px;
+  border-radius: 0.375rem;
   border: 0;
   font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s;
 }
 
-.glr-confirm__cancel { background: rgba(0, 0, 0, 0.08); }
+.glr-confirm__cancel {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--md-default-fg-color, #000);
+}
+.glr-confirm__cancel:hover { background: rgba(0, 0, 0, 0.1); }
+
 .glr-confirm__ok {
   background: var(--md-primary-fg-color, #0d7377);
   color: #fff;
 }
+.glr-confirm__ok:hover { background: #0a5e61; }
 
-.glr-confirm--danger .glr-confirm__ok { background: #cf222e; }
+.glr-confirm--danger .glr-confirm__ok {
+  background: #cf222e;
+}
+.glr-confirm--danger .glr-confirm__ok:hover { background: #a40e26; }
 
 .glr-confirm--mobile[open] {
   position: fixed;
