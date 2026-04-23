@@ -203,18 +203,27 @@
       return apiFetch(projectPath("/merge_requests/" + iid + "/award_emoji"));
     },
 
-    toggleAwardEmoji: function (iid, name) {
+    toggleAwardEmoji: function (iid, name, currentUserId) {
       // Check if user already awarded this emoji; if so, delete it; otherwise, create.
+      if (!currentUserId) {
+        return Promise.reject({ status: 0, message: "User ID not available", body: null });
+      }
       return apiFetch(projectPath("/merge_requests/" + iid + "/award_emoji")).then(function (emojis) {
-        var userId = window.__glr_current_user_id;
         var existing = emojis.find(function (e) {
-          return e.name === name && e.user && e.user.id === userId;
+          return e.name === name && e.user && String(e.user.id) === String(currentUserId);
         });
         if (existing) {
           return apiFetch(
             projectPath("/merge_requests/" + iid + "/award_emoji/" + existing.id),
             { method: "DELETE" }
-          ).then(function () { return { action: "removed", name: name }; });
+          ).then(
+            function () { return { action: "removed", name: name }; },
+            function (err) {
+              // 404 means emoji was already removed (race condition) — treat as success
+              if (err && err.status === 404) return { action: "removed", name: name };
+              return Promise.reject(err);
+            }
+          );
         }
         return apiFetch(
           projectPath("/merge_requests/" + iid + "/award_emoji"),
