@@ -731,6 +731,11 @@ a.glr-panel__file-path:hover { text-decoration: underline; color: var(--md-accen
   cursor: pointer;
 }
 
+/* Prevent block header subtitle (e.g. Draft toggle) from colliding with × */
+.glr-panel__sheet .glr-panel__block-header {
+  padding-right: 2.5rem;
+}
+
 /* Toast */
 
 #glr-toast-host {
