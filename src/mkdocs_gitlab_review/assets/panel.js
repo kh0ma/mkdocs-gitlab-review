@@ -437,11 +437,6 @@
         { emoji: "🙈", name: "see_no_evil" },
       ];
 
-      // Store user ID for toggle logic
-      if (ctx.currentUser && ctx.currentUser.id) {
-        window.__glr_current_user_id = ctx.currentUser.id;
-      }
-
       var grid = document.createElement("div");
       grid.className = "glr-panel__reaction-grid";
 
@@ -462,7 +457,7 @@
           btn.addEventListener("click", function () {
             if (btn.disabled) return;
             btn.disabled = true;
-            ctx.api.toggleAwardEmoji(ctx.mrIid, r.name).then(function () {
+            ctx.api.toggleAwardEmoji(ctx.mrIid, r.name, ctx.currentUser.id).then(function () {
               // Re-render the whole panel to get accurate counts from API
               if (ctx.onChange) ctx.onChange();
             }).catch(function () {
