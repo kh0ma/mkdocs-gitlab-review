@@ -1,16 +1,27 @@
 """MkDocs plugin that enables inline GitLab MR review comments."""
 
+import hashlib
 import json
 import logging
 import os
+import shutil
 from pathlib import Path
 
 from mkdocs.config import config_options
 from mkdocs.plugins import BasePlugin
+from mkdocs.utils import get_relative_url
 
 from .source_map import annotate_html, build_block_lines
 
 log = logging.getLogger("mkdocs.plugins.gitlab_review")
+
+# Where plugin assets land inside the built site. Pages reference these
+# instead of inlining them, so each file is downloaded once and cached.
+ASSET_SITE_DIR = "assets/gitlab-review"
+CSS_FILES = ["review.css", "panel.css"]
+# Load order matters: oauth → api → mentions → panel → review
+JS_FILES = ["oauth.js", "api.js", "mentions.js", "panel.js", "review.js"]
+PAGE_MAP_FILE = "page-map.js"
 
 
 class GitLabReviewPlugin(BasePlugin):
@@ -59,6 +70,8 @@ class GitLabReviewPlugin(BasePlugin):
         if not gitlab_url or not project_id:
             log.warning("gitlab-review: gitlab_url or project_id not set, plugin disabled")
             self.config["enabled"] = False
+
+        self._asset_version = self._compute_asset_version()
 
         return config
 
@@ -116,12 +129,33 @@ class GitLabReviewPlugin(BasePlugin):
         return annotate_html(html, git_path, line_map)
 
     def on_post_page(self, output, /, *, page, config):
-        """Inject JS/CSS assets and plugin config into rendered page."""
+        """Inject asset references and plugin config into rendered page."""
         if not self.config["enabled"]:
             return output
 
-        injection = self._build_injection()
+        injection = self._build_injection(page)
         return output.replace("</body>", injection + "\n</body>")
+
+    def on_post_build(self, /, *, config):
+        """Copy JS/CSS assets and write the page map into the built site.
+
+        Runs after all pages are rendered, so the page map is complete —
+        unlike per-page injection, which saw only pages rendered so far.
+        """
+        if not self.config["enabled"]:
+            return
+
+        out_dir = Path(config["site_dir"]) / ASSET_SITE_DIR
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        for name in CSS_FILES + JS_FILES:
+            src = self._assets_dir / name
+            if src.exists():
+                shutil.copy2(src, out_dir / name)
+
+        page_map_json = json.dumps(self._page_map)
+        page_map = f"window.__GITLAB_REVIEW_PAGE_MAP__={page_map_json};"
+        (out_dir / PAGE_MAP_FILE).write_text(page_map)
 
     # ------------------------------------------------------------------
     # Internal
@@ -150,17 +184,33 @@ class GitLabReviewPlugin(BasePlugin):
             # Fallback: return with docs/ prefix
             return str(Path("docs") / src_path)
 
-    def _build_injection(self) -> str:
-        """Build the HTML to inject before </body>."""
+    def _compute_asset_version(self) -> str:
+        """Short content hash over all bundled assets, used for cache busting."""
+        digest = hashlib.md5()
+        for name in CSS_FILES + JS_FILES:
+            path = self._assets_dir / name
+            if path.exists():
+                digest.update(path.read_bytes())
+        return digest.hexdigest()[:8]
+
+    def _asset_url(self, name: str, page) -> str:
+        """URL of a site asset relative to the given page, with cache buster."""
+        rel = get_relative_url(f"{ASSET_SITE_DIR}/{name}", page.url)
+        return f"{rel}?v={self._asset_version}"
+
+    def _build_injection(self, page) -> str:
+        """Build the HTML to inject before </body>.
+
+        Only the small per-site config is inlined; everything else is
+        referenced as external files (written once in on_post_build) so
+        the browser caches them across pages instead of re-downloading
+        ~200KB of inlined JS/CSS with every page.
+        """
         parts = []
 
         # Config as global variable
         config_json = json.dumps(self._plugin_config)
-        page_map_json = json.dumps(self._page_map)
-        parts.append(
-            f'<script>window.__GITLAB_REVIEW__={config_json};'
-            f'window.__GITLAB_REVIEW_PAGE_MAP__={page_map_json};</script>'
-        )
+        parts.append(f'<script>window.__GITLAB_REVIEW__={config_json};</script>')
 
         # CDN dependencies
         parts.append(
@@ -176,17 +226,22 @@ class GitLabReviewPlugin(BasePlugin):
         )
 
         # CSS — review.css (core) + panel.css (review panel)
-        for css_file in ["review.css", "panel.css"]:
-            css_path = self._assets_dir / css_file
-            if css_path.exists():
-                css = css_path.read_text()
-                parts.append(f"<style>{css}</style>")
+        for css_file in CSS_FILES:
+            if (self._assets_dir / css_file).exists():
+                parts.append(
+                    f'<link rel="stylesheet" href="{self._asset_url(css_file, page)}">'
+                )
+
+        # Page map before plugin JS — scripts at end of body execute in order
+        parts.append(
+            f'<script src="{self._asset_url(PAGE_MAP_FILE, page)}"></script>'
+        )
 
         # JS — oauth → api → mentions → panel → main (load order matters)
-        for js_file in ["oauth.js", "api.js", "mentions.js", "panel.js", "review.js"]:
-            js_path = self._assets_dir / js_file
-            if js_path.exists():
-                js = js_path.read_text()
-                parts.append(f"<script>{js}</script>")
+        for js_file in JS_FILES:
+            if (self._assets_dir / js_file).exists():
+                parts.append(
+                    f'<script src="{self._asset_url(js_file, page)}"></script>'
+                )
 
         return "\n".join(parts)

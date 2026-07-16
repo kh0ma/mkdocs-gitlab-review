@@ -144,13 +144,18 @@ class TestOnPageContent:
 # ── on_post_page ───────────────────────────────────────────────────
 
 
+def _page(url=""):
+    page = MagicMock()
+    page.url = url
+    return page
+
+
 class TestOnPostPage:
     def test_injects_before_body_close(self, plugin, mkdocs_config):
         plugin.on_config(mkdocs_config)
-        page = MagicMock()
 
         output = "<html><body><p>Content</p></body></html>"
-        result = plugin.on_post_page(output, page=page, config=mkdocs_config)
+        result = plugin.on_post_page(output, page=_page(), config=mkdocs_config)
 
         assert "__GITLAB_REVIEW__" in result
         assert "marked.min.js" in result
@@ -159,10 +164,9 @@ class TestOnPostPage:
 
     def test_injects_config_json(self, plugin, mkdocs_config):
         plugin.on_config(mkdocs_config)
-        page = MagicMock()
 
         output = "<html><body></body></html>"
-        result = plugin.on_post_page(output, page=page, config=mkdocs_config)
+        result = plugin.on_post_page(output, page=_page(), config=mkdocs_config)
 
         # Extract the JSON from the script tag
         start = result.index("__GITLAB_REVIEW__=") + len("__GITLAB_REVIEW__=")
@@ -172,10 +176,75 @@ class TestOnPostPage:
         assert config_data["gitlab_url"] == "https://gitlab.example.com"
         assert config_data["project_id"] == "42"
 
-    def test_disabled_returns_output(self, plugin, mkdocs_config):
-        plugin.config["enabled"] = False
-        page = MagicMock()
+    def test_references_external_assets_instead_of_inlining(self, plugin, mkdocs_config):
+        plugin.on_config(mkdocs_config)
 
         output = "<html><body></body></html>"
-        result = plugin.on_post_page(output, page=page, config=mkdocs_config)
+        result = plugin.on_post_page(output, page=_page(), config=mkdocs_config)
+
+        version = plugin._asset_version
+        assert f'src="assets/gitlab-review/review.js?v={version}"' in result
+        assert f'src="assets/gitlab-review/page-map.js?v={version}"' in result
+        assert f'href="assets/gitlab-review/review.css?v={version}"' in result
+        # Nothing bulky is inlined anymore
+        assert "<style>" not in result
+        assert "use strict" not in result
+        assert "__GITLAB_REVIEW_PAGE_MAP__" not in result
+
+    def test_asset_urls_are_relative_to_page_depth(self, plugin, mkdocs_config):
+        plugin.on_config(mkdocs_config)
+
+        output = "<html><body></body></html>"
+        result = plugin.on_post_page(
+            output, page=_page("specs/design-docs/checkout/"), config=mkdocs_config
+        )
+
+        assert 'src="../../../assets/gitlab-review/review.js' in result
+
+    def test_page_map_loads_before_plugin_scripts(self, plugin, mkdocs_config):
+        plugin.on_config(mkdocs_config)
+
+        output = "<html><body></body></html>"
+        result = plugin.on_post_page(output, page=_page(), config=mkdocs_config)
+
+        assert result.index("page-map.js") < result.index("oauth.js")
+
+    def test_disabled_returns_output(self, plugin, mkdocs_config):
+        plugin.config["enabled"] = False
+
+        output = "<html><body></body></html>"
+        result = plugin.on_post_page(output, page=_page(), config=mkdocs_config)
         assert result == output
+
+
+# ── on_post_build ──────────────────────────────────────────────────
+
+
+class TestOnPostBuild:
+    def test_writes_assets_and_page_map(self, plugin, mkdocs_config, tmp_path):
+        plugin.on_config(mkdocs_config)
+        site_dir = tmp_path / "site"
+        mkdocs_config["site_dir"] = str(site_dir)
+
+        # Simulate a rendered page having registered itself in the map
+        plugin._page_map["specs/index.md"] = "specs/"
+
+        plugin.on_post_build(config=mkdocs_config)
+
+        asset_dir = site_dir / "assets" / "gitlab-review"
+        for name in ["review.css", "panel.css", "oauth.js", "api.js",
+                     "mentions.js", "panel.js", "review.js"]:
+            assert (asset_dir / name).exists(), name
+
+        page_map = (asset_dir / "page-map.js").read_text()
+        assert page_map.startswith("window.__GITLAB_REVIEW_PAGE_MAP__=")
+        assert '"specs/index.md": "specs/"' in page_map
+
+    def test_disabled_writes_nothing(self, plugin, mkdocs_config, tmp_path):
+        plugin.config["enabled"] = False
+        site_dir = tmp_path / "site"
+        mkdocs_config["site_dir"] = str(site_dir)
+
+        plugin.on_post_build(config=mkdocs_config)
+
+        assert not site_dir.exists()
